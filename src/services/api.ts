@@ -1,7 +1,16 @@
 // API client for the app's Route Handlers.
-import type { ExportRequest, SearchRequest, SearchResponse } from "@/shared/schemas";
+import type {
+  ExportRequest,
+  SavedSupplier,
+  SavedSuppliersList,
+  SearchRequest,
+  SearchResponse,
+  Supplier,
+  UpdateSavedSupplierRequest,
+} from "@/shared/schemas";
 
 const SEARCH_TIMEOUT_MS = 190_000;
+const SAVED_TIMEOUT_MS = 15_000;
 
 export class ApiRequestError extends Error {
   constructor(public status: number) {
@@ -20,6 +29,47 @@ export async function searchSuppliers(request: SearchRequest, signal: AbortSigna
   });
   if (!response.ok) throw new ApiRequestError(response.status);
   return (await response.json()) as SearchResponse;
+}
+
+// Saves a supplier; an already saved supplier (409) counts as success and returns the existing row.
+export async function saveSupplier(search: SearchRequest, supplier: Supplier): Promise<SavedSupplier> {
+  const response = await savedFetch("/api/saved-suppliers", {
+    method: "POST",
+    body: JSON.stringify({ search, supplier }),
+  });
+  if (response.status !== 201 && response.status !== 409) throw new ApiRequestError(response.status);
+  return (await response.json()) as SavedSupplier;
+}
+
+export async function listSavedSuppliers(): Promise<SavedSuppliersList> {
+  const response = await savedFetch("/api/saved-suppliers", { method: "GET" });
+  if (!response.ok) throw new ApiRequestError(response.status);
+  return (await response.json()) as SavedSuppliersList;
+}
+
+// Throws ApiRequestError(404) when the supplier was deleted meanwhile.
+export async function updateSavedSupplier(id: string, patch: UpdateSavedSupplierRequest): Promise<SavedSupplier> {
+  const response = await savedFetch(`/api/saved-suppliers/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  if (!response.ok) throw new ApiRequestError(response.status);
+  return (await response.json()) as SavedSupplier;
+}
+
+// A supplier that is already gone (404) counts as deleted.
+export async function deleteSavedSupplier(id: string): Promise<void> {
+  const response = await savedFetch(`/api/saved-suppliers/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!response.ok && response.status !== 404) throw new ApiRequestError(response.status);
+}
+
+function savedFetch(url: string, init: RequestInit): Promise<Response> {
+  return fetch(url, {
+    ...init,
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(SAVED_TIMEOUT_MS),
+  });
 }
 
 // Returns the generated xlsx file; throws on any non-200 response or network failure.

@@ -1,161 +1,56 @@
 "use client";
 
-// Search result card (DESIGN 1.2). Supplier data is shown as plain text in its source language.
-import { useId, useState, type ReactNode } from "react";
+// Search result card (DESIGN 1.2) with the Save / Saved button (PRD FR7.1–FR7.2).
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CRITERIA_KEYS, type Source, type Supplier } from "@/shared/schemas";
-import { safeHttpUrl, urlKey, websiteDomain } from "@/shared/normalize";
-import { CriterionChip } from "./CriterionChip";
-import { ExternalLinkIcon, GlobeIcon, MailIcon, PhoneIcon, PinIcon } from "./icons";
+import type { Supplier } from "@/shared/schemas";
+import { Banner } from "./Banner";
+import { Button } from "./Button";
+import { BookmarkIcon, CheckIcon } from "./icons";
+import { SupplierDetails } from "./SupplierDetails";
 import styles from "./SupplierCard.module.css";
 
-const EXTERNAL = { target: "_blank", rel: "noopener noreferrer" } as const;
-
-// All sources of the supplier: listed sources first, then criterion URLs not already listed.
-function allSources(supplier: Supplier): Source[] {
-  const seen = new Set<string>();
-  const result: Source[] = [];
-  const add = (url: string, title: string | null) => {
-    const key = urlKey(url);
-    if (!key || seen.has(key)) return;
-    seen.add(key);
-    result.push({ url, title });
-  };
-  supplier.sources.forEach((s) => add(s.url, s.title));
-  CRITERIA_KEYS.forEach((k) => supplier.criteria[k].sourceUrls.forEach((url) => add(url, null)));
-  return result;
-}
-
-function sourceLabel(source: Source): string {
-  return source.title?.trim() || websiteDomain(source.url) || source.url;
-}
-
-export function SupplierCard({ supplier }: { supplier: Supplier }) {
+export function SupplierCard({ supplier, onSave }: { supplier: Supplier; onSave: () => Promise<void> }) {
   const { t } = useTranslation();
-  const [sourcesOpen, setSourcesOpen] = useState(false);
-  const sourcesId = useId();
-  const na = t("supplier.notAvailable");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "error">("idle");
 
-  const sources = allSources(supplier);
-  const website = safeHttpUrl(supplier.website);
-  const phoneHref = supplier.phone ? `tel:${supplier.phone.replace(/[^\d+]/g, "")}` : null;
-
-  const clients =
-    supplier.businessClientsCount !== null
-      ? `${supplier.businessClientsCount}${supplier.businessClientExamples.length ? ` (${supplier.businessClientExamples.join(", ")})` : ""}`
-      : supplier.businessClientExamples.length
-        ? supplier.businessClientExamples.join(", ")
-        : na;
+  async function handleSave() {
+    setSaveState("saving");
+    try {
+      await onSave();
+      setSaveState("idle");
+    } catch {
+      setSaveState("error");
+    }
+  }
 
   return (
     <article className={styles.card}>
       <header className={styles.top}>
         <h3 className={styles.name}>{supplier.name}</h3>
-        {!supplier.meetsAllCriteria && <span className={styles.partial}>{t("criteria.partial")}</span>}
+        <div className={styles.actions}>
+          {!supplier.meetsAllCriteria && <span className={styles.partial}>{t("criteria.partial")}</span>}
+          {supplier.savedId ? (
+            <Button variant="saved" compact disabled icon={<CheckIcon size={16} />}>
+              {t("supplier.saved")}
+            </Button>
+          ) : (
+            <Button
+              compact
+              icon={<BookmarkIcon size={16} />}
+              onClick={handleSave}
+              disabled={saveState === "saving"}
+              aria-busy={saveState === "saving"}
+            >
+              {t("supplier.save")}
+            </Button>
+          )}
+        </div>
       </header>
 
-      <p className={styles.description} title={supplier.description ?? undefined}>
-        {supplier.description ?? na}
-      </p>
+      {saveState === "error" && <Banner variant="error" message={t("saved.saveError")} />}
 
-      <ul className={styles.chips}>
-        {CRITERIA_KEYS.map((key) => (
-          <CriterionChip key={key} criterion={key} status={supplier.criteria[key].status} />
-        ))}
-      </ul>
-
-      <p className={styles.facts}>
-        <Fact label={t("supplier.regNumber")} value={supplier.registrationOrLicenseNumber ?? na} />
-        <span aria-hidden="true"> · </span>
-        <Fact label={t("supplier.yearsActive")} value={supplier.yearsActive?.toString() ?? na} />
-        <span aria-hidden="true"> · </span>
-        <Fact label={t("supplier.businessClients")} value={clients} />
-      </p>
-
-      <div className={styles.contacts}>
-        <ul className={styles.contactList}>
-          <Contact icon={<PhoneIcon size={14} />} label={t("supplier.phone")}>
-            {phoneHref ? <a href={phoneHref}>{supplier.phone}</a> : na}
-          </Contact>
-          <Contact icon={<MailIcon size={14} />} label={t("supplier.email")}>
-            {supplier.email ? <a href={`mailto:${supplier.email}`}>{supplier.email}</a> : na}
-          </Contact>
-          <Contact icon={<GlobeIcon size={14} />} label={t("supplier.website")}>
-            {website ? (
-              <a href={website} {...EXTERNAL}>
-                {websiteDomain(website)}
-              </a>
-            ) : (
-              na
-            )}
-          </Contact>
-          <Contact icon={<PinIcon size={14} />} label={t("supplier.address")}>
-            {supplier.address ?? na}
-          </Contact>
-        </ul>
-        {sources.length > 0 ? (
-          <button
-            type="button"
-            className={styles.sourcesToggle}
-            aria-expanded={sourcesOpen}
-            aria-controls={sourcesId}
-            onClick={() => setSourcesOpen((open) => !open)}
-          >
-            {t("supplier.sourcesToggle", { n: sources.length })}
-            <ExternalLinkIcon size={13} />
-          </button>
-        ) : (
-          <span className={styles.sourcesEmpty}>{t("supplier.sourcesToggle", { n: 0 })}</span>
-        )}
-      </div>
-
-      {sourcesOpen && (
-        <div id={sourcesId} className={styles.sources}>
-          <ol className={styles.sourceList}>
-            {sources.map((source) => (
-              <li key={source.url}>
-                <a href={source.url} {...EXTERNAL}>
-                  {sourceLabel(source)}
-                </a>
-              </li>
-            ))}
-          </ol>
-          <dl className={styles.criterionSources}>
-            {CRITERIA_KEYS.map((key) => (
-              <div key={key} className={styles.criterionRow}>
-                <dt>{t(`criteria.${key}`)}:</dt>
-                <dd>
-                  {supplier.criteria[key].sourceUrls.length
-                    ? supplier.criteria[key].sourceUrls.map((url, i) => (
-                        <a key={url} href={url} {...EXTERNAL} title={url}>
-                          {websiteDomain(url) ?? `[${i + 1}]`}
-                        </a>
-                      ))
-                    : na}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
+      <SupplierDetails supplier={supplier} />
     </article>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <span>
-      {label}: <strong>{value}</strong>
-    </span>
-  );
-}
-
-function Contact({ icon, label, children }: { icon: ReactNode; label: string; children: ReactNode }) {
-  return (
-    <li className={styles.contact}>
-      {icon}
-      <span className="visually-hidden">{label}: </span>
-      <span className={styles.contactValue}>{children}</span>
-    </li>
   );
 }

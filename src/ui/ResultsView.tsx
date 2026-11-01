@@ -51,7 +51,7 @@ export function ResultsView() {
 // Mounted only while results are shown, so the export state resets with every new search.
 function Results({ request, response }: { request: SearchRequest; response: SearchResponse }) {
   const { t } = useTranslation();
-  const { lang } = useAppState();
+  const { lang, saveResultSupplier } = useAppState();
   const [exportState, setExportState] = useState<"idle" | "exporting" | "error">("idle");
 
   async function handleExport() {
@@ -101,9 +101,9 @@ function Results({ request, response }: { request: SearchRequest; response: Sear
         <>
           {response.fewerThanFive && <Banner variant="info" message={t("search.fewerThanFive")} />}
           <ul className={styles.list}>
-            {response.suppliers.map((supplier) => (
+            {response.suppliers.map((supplier, index) => (
               <li key={supplier.name}>
-                <SupplierCard supplier={supplier} />
+                <SupplierCard supplier={supplier} onSave={() => saveResultSupplier(index)} />
               </li>
             ))}
           </ul>

@@ -7,7 +7,8 @@ type Option = { value: string; label: string };
 type SelectProps = {
   id: string;
   label: string;
-  placeholder: string;
+  // Without a placeholder the field always holds one of the options.
+  placeholder?: string;
   options: Option[];
   value: string | null;
   disabled?: boolean;
@@ -41,9 +42,11 @@ export function Select({
           data-empty={value ? undefined : ""}
           onChange={(e) => onChange(e.target.value || null)}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          {placeholder !== undefined && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
           {options.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}

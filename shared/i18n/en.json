@@ -66,6 +66,7 @@
     "title": "Saved suppliers",
     "total": "Total: {{n}}",
     "empty": "No saved suppliers yet",
+    "choose": "Select a city and service type",
     "savedAt": "Saved: {{date}}",
     "statusLabel": "Status",
     "status": {

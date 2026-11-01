@@ -7,7 +7,7 @@ import { I18nextProvider } from "react-i18next";
 import type { Lang } from "@/shared/catalog";
 import { createI18n, DEFAULT_LANG } from "@/shared/i18n";
 import type { SearchRequest, SearchResponse } from "@/shared/schemas";
-import { searchSuppliers } from "@/src/services/api";
+import { saveSupplier, searchSuppliers } from "@/src/services/api";
 
 export type SearchForm = {
   countryId: string | null;
@@ -35,7 +35,8 @@ type Action =
   | { type: "setService"; serviceId: string | null }
   | { type: "searchStarted"; request: SearchRequest }
   | { type: "searchSucceeded"; response: SearchResponse }
-  | { type: "searchFailed" };
+  | { type: "searchFailed" }
+  | { type: "supplierSaved"; searchedAt: string; index: number; savedId: string };
 
 const initialState: State = {
   lang: DEFAULT_LANG,
@@ -60,6 +61,13 @@ function reducer(state: State, action: Action): State {
       return { ...state, search: { ...state.search, status: "success", response: action.response } };
     case "searchFailed":
       return { ...state, search: { ...state.search, status: "error", response: null } };
+    case "supplierSaved": {
+      // Ignored when a newer search has replaced the results the save was made from.
+      const response = state.search.response;
+      if (!response || response.searchedAt !== action.searchedAt) return state;
+      const suppliers = response.suppliers.map((s, i) => (i === action.index ? { ...s, savedId: action.savedId } : s));
+      return { ...state, search: { ...state.search, response: { ...response, suppliers } } };
+    }
   }
 }
 
@@ -70,6 +78,8 @@ type AppStateContextValue = State & {
   setService: (serviceId: string | null) => void;
   runSearch: (request: SearchRequest) => void;
   retrySearch: () => void;
+  // Saves a supplier from the shown results and marks it as saved; throws when saving fails.
+  saveResultSupplier: (index: number) => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -107,6 +117,16 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     if (lastRequest) runSearch(lastRequest);
   }, [lastRequest, runSearch]);
 
+  const { request: searchRequest, response: searchResponse } = state.search;
+  const saveResultSupplier = useCallback(
+    async (index: number) => {
+      if (!searchRequest || !searchResponse) return;
+      const saved = await saveSupplier(searchRequest, searchResponse.suppliers[index]);
+      dispatch({ type: "supplierSaved", searchedAt: searchResponse.searchedAt, index, savedId: saved.id });
+    },
+    [searchRequest, searchResponse],
+  );
+
   const value = useMemo<AppStateContextValue>(
     () => ({
       ...state,
@@ -116,8 +136,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setService: (serviceId) => dispatch({ type: "setService", serviceId }),
       runSearch,
       retrySearch,
+      saveResultSupplier,
     }),
-    [state, setLang, runSearch, retrySearch],
+    [state, setLang, runSearch, retrySearch, saveResultSupplier],
   );
 
   return (

@@ -1,0 +1,27 @@
+.dialog {
+  width: min(440px, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-5);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-overlay);
+  color: var(--ink);
+}
+
+.dialog::backdrop {
+  background: rgba(11, 20, 25, 0.35);
+}
+
+.question {
+  font-size: var(--text-h4);
+  line-height: var(--lh-h4);
+  font-weight: 600;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}

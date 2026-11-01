@@ -75,4 +75,38 @@ export const ExportRequestSchema = z.object({
 });
 export type ExportRequest = z.infer<typeof ExportRequestSchema>;
 
+export const SAVED_STATUSES = ["new", "contacted", "approved", "not_suitable"] as const;
+export type SavedStatus = (typeof SAVED_STATUSES)[number];
+
+export const NOTE_MAX_LENGTH = 1000;
+
+export const SavedSupplierSchema = SupplierSchema.omit({ savedId: true }).extend({
+  id: z.string(),
+  countryId: z.string(),
+  cityId: z.string(),
+  serviceId: z.string(),
+  status: z.enum(SAVED_STATUSES),
+  note: text(NOTE_MAX_LENGTH),
+  savedAt: z.string(),
+  updatedAt: z.string(),
+});
+export type SavedSupplier = z.infer<typeof SavedSupplierSchema>;
+
+export type SavedSuppliersList = { items: SavedSupplier[]; total: number };
+
+export const SaveSupplierRequestSchema = z.object({
+  search: SearchRequestSchema,
+  supplier: SupplierSchema,
+});
+export type SaveSupplierRequest = z.infer<typeof SaveSupplierRequestSchema>;
+
+// Only status and note may change; any other field is rejected.
+export const UpdateSavedSupplierRequestSchema = z
+  .strictObject({
+    status: z.enum(SAVED_STATUSES).optional(),
+    note: text(NOTE_MAX_LENGTH).optional(),
+  })
+  .refine((patch) => patch.status !== undefined || patch.note !== undefined);
+export type UpdateSavedSupplierRequest = z.infer<typeof UpdateSavedSupplierRequestSchema>;
+
 export type ApiError = { error: { code: string } };

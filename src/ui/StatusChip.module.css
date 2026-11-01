@@ -1,0 +1,33 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  line-height: var(--lh-caption);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.new {
+  background: var(--paper);
+  border-color: var(--navy-700);
+  color: var(--navy-700);
+}
+
+.contacted {
+  background: var(--navy-100);
+  color: var(--navy-700);
+}
+
+.approved {
+  background: var(--green-700);
+  color: var(--ivory);
+}
+
+.not_suitable {
+  background: var(--ivory-200);
+  border-color: var(--line-strong);
+  color: var(--muted);
+}
