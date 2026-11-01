@@ -68,4 +68,11 @@ export const SearchResponseSchema = z.object({
 });
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
 
+export const ExportRequestSchema = z.object({
+  search: SearchRequestSchema,
+  response: SearchResponseSchema.extend({ suppliers: SearchResponseSchema.shape.suppliers.min(1) }),
+  uiLanguage: z.enum(["ru", "en", "uk"]),
+});
+export type ExportRequest = z.infer<typeof ExportRequestSchema>;
+
 export type ApiError = { error: { code: string } };

@@ -33,6 +33,7 @@
     "error": "Не вдалося виконати пошук. Спробуйте ще раз.",
     "retry": "Повторити",
     "export": "Експорт в Excel",
+    "exportError": "Не вдалося експортувати файл. Спробуйте ще раз.",
     "barLabel": "Пошук постачальників"
   },
   "criteria": {
@@ -86,5 +87,30 @@
   },
   "results": {
     "heading": "{{service}} – {{city}}"
+  },
+  "excel": {
+    "country": "Країна",
+    "city": "Місто",
+    "service": "Вид послуги",
+    "searchDate": "Дата пошуку",
+    "columns": {
+      "name": "Назва",
+      "description": "Опис",
+      "phone": "Телефон",
+      "email": "Ел. пошта",
+      "website": "Сайт",
+      "address": "Адреса",
+      "regNumber": "Реєстр. № / ліцензія",
+      "yearsActive": "Років роботи",
+      "businessClientsCount": "Бізнес-клієнти (кількість)",
+      "businessClientExamples": "Приклади бізнес-клієнтів",
+      "registration": "Реєстрація / ліцензія",
+      "yearsActiveCriterion": "3+ років роботи",
+      "businessClientsCriterion": "3+ бізнес-клієнтів",
+      "meetsAll": "Відповідає всім умовам",
+      "sources": "Джерела"
+    },
+    "yes": "Так",
+    "no": "Ні"
   }
 }

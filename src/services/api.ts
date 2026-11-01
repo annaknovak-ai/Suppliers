@@ -1,5 +1,5 @@
 // API client for the app's Route Handlers.
-import type { SearchRequest, SearchResponse } from "@/shared/schemas";
+import type { ExportRequest, SearchRequest, SearchResponse } from "@/shared/schemas";
 
 const SEARCH_TIMEOUT_MS = 190_000;
 
@@ -20,4 +20,16 @@ export async function searchSuppliers(request: SearchRequest, signal: AbortSigna
   });
   if (!response.ok) throw new ApiRequestError(response.status);
   return (await response.json()) as SearchResponse;
+}
+
+// Returns the generated xlsx file; throws on any non-200 response or network failure.
+export async function exportSuppliers(request: ExportRequest): Promise<Blob> {
+  const response = await fetch("/api/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+    cache: "no-store",
+  });
+  if (!response.ok) throw new ApiRequestError(response.status);
+  return response.blob();
 }
