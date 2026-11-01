@@ -13,7 +13,7 @@
 | שפת פיתוח | **TypeScript** | שפה אחת לכל הקוד: Frontend, Backend וקוד משותף |
 | Framework (Frontend + Backend) | **Next.js (App Router), הגרסה היציבה העדכנית** | ממשק ה-Web ו-Route Handlers לצד השרת, באותו פרויקט |
 | UI | **React + CSS Modules** | רכיבי הממשק. Dropdowns מבוססים על `<select>` רגיל של HTML |
-| התקנה על מסך הבית (PWA) | **Web App Manifest מובנה ב-Next.js** (`app/manifest.ts`) | התקנת האתר על מסך הבית ב-iOS וב-Android ופתיחה במסך מלא, כמו אפליקציה |
+| התקנה על מסך הבית (PWA) | **Web App Manifest מובנה ב-Next.js** (`app/manifest.ts`) | התקנת האתר על מסך הבית ב-Android ופתיחה במסך מלא, כמו אפליקציה |
 | ריבוי שפות (i18n) | **i18next + react-i18next** | ניהול טקסטי הממשק ב-ru/en/uk והחלפת שפה בזמן ריצה |
 | ולידציה | **Zod** | בדיקת קלט ופלט ב-API ובמבנה התשובה מה-AI, עם סכמות משותפות ללקוח ולשרת |
 | Database | **Supabase (PostgreSQL)** | שמירת הספקים השמורים, הסטטוסים וההערות |
@@ -22,14 +22,14 @@
 | מנוע חיפוש ואימות | **Claude API (Anthropic) – מודל `claude-opus-5-5` עם Web Search Tool** | חיפוש ברשת בזמן אמת, חילוץ פרטי ספקים, בדיקת תנאי סף והחזרת מקורות (Citations) |
 | SDK ל-AI | **@anthropic-ai/sdk** | ה-SDK הרשמי של Anthropic ל-TypeScript |
 | יצירת Excel | **ExcelJS** (בצד השרת) | יצירת קובץ `.xlsx` |
-| Hosting | **Vercel (תוכנית Pro)** | אירוח האתר וה-Functions, פריסה אוטומטית מ-GitHub, Preview לכל ענף |
+| Hosting | **Vercel (תוכנית Pro)** | אירוח האתר וה-Functions, פריסה אוטומטית מ-GitHub בכל Push ל-`main` |
 | הגנה מפני שימוש לרעה | **Vercel WAF Rate Limiting** | הגבלת מספר החיפושים והשינויים לכל IP |
 | ניהול קוד | **GitHub** | Repository אחד לכל המערכת |
 | Authentication | **אין** | ה-PRD קובע שהגישה פתוחה לכל מי שיש לו לינק |
 
 ### 1.2 נימוקים להחלטות המרכזיות
 
-**Web בלבד, עם התקנה כ-PWA.** לפי ה-PRD, המוצר הוא אתר רספונסיבי שאפשר להתקין על מסך הבית בנייד, בלי הפצה בחנויות. PWA עונה על זה בלי Build נפרד ל-iOS ול-Android, בלי חשבונות מפתח ב-Apple וב-Google ובלי סקירת חנות. העדכונים מגיעים לכל המשתמשים מיד עם הפריסה.
+**Web בלבד, עם התקנה כ-PWA.** לפי ה-PRD, המוצר הוא אתר רספונסיבי שאפשר להתקין על מסך הבית בנייד, בלי הפצה בחנויות. PWA עונה על זה בלי Build נפרד ל-Android, בלי חשבון מפתח ב-Google ובלי סקירת חנות. הפלטפורמות הנתמכות הן מחשב ו-Android בלבד (ADR-4). העדכונים מגיעים לכל המשתמשים מיד עם הפריסה.
 
 **Next.js כ-Framework אחד ל-Frontend ול-Backend.** בחנתי שלוש חלופות:
 - **Next.js:** פיתוח של Vercel, וה-Framework שנתמך אצלה באופן המלא ביותר. Route Handlers רצים כ-Vercel Functions בלי הגדרה נוספת, ויש תמיכה מובנית ב-Web App Manifest.
@@ -67,8 +67,8 @@ Claude נבחר כי הוא מבצע בקריאה אחת את כל השלבים:
 | **עלות לכל חיפוש** | הערכה גסה במודל `claude-opus-5-5`: כ-0.2$ עד 0.4$ לחיפוש, לפי כמות תוכן החיפוש שנקראת | הגבלת `max_uses`, Dynamic Filtering, Rate Limiting ותקרת הוצאה חודשית בחשבון Anthropic. המודל מוגדר במשתנה סביבה. מעבר למודל זול יותר, כמו `claude-haiku-5-5`, יוזיל משמעותית אך עלול לפגוע בדיוק. זו החלטה עסקית שאפשר לקבל אחרי בדיקה על חיפושים אמיתיים |
 | **לינק פתוח ללא התחברות** | כל מי שיש לו את הלינק יכול להפעיל חיפושים בתשלום, וגם לערוך ולמחוק ספקים שמורים (PRD FR6.2) | Rate Limiting לכל IP ב-Vercel WAF, תקרת הוצאה ב-Anthropic, חלון אישור לפני מחיקה וגיבויים יומיים של ה-Database ב-Production |
 | **השהיית פרויקט Supabase** | בתוכנית החינמית של Supabase, פרויקט שלא נעשה בו שימוש במשך 7 ימים מושהה, והאתר יפסיק לעבוד עד שמשחזרים אותו | פרויקט ה-Production בתוכנית Pro, שבה פרויקטים לא מושהים. פרויקט ה-Development בתוכנית החינמית, והשהיה שלו לא פוגעת במשתמשים (סעיף 2.10) |
-| **התקנה ב-iPhone** | ב-iOS אין כפתור התקנה אוטומטי. המשתמש מתקין דרך Safari: כפתור השיתוף ואחר כך "Add to Home Screen" | הסבר קצר בממשק, שמוצג רק ב-iOS כשהאתר עוד לא הותקן (סעיף 2.3) |
-| **הורדת קובץ בנייד** | כשהאתר מותקן ב-iOS ונפתח במסך מלא, ההורדה עובדת אחרת מאשר בדפדפן רגיל | ההורדה מתבצעת עם קובץ מצורף רגיל מהשרת. כשהדפדפן תומך, נפתח תפריט השיתוף של מערכת ההפעלה (Web Share API עם קובץ). יש לבדוק את ההורדה בפועל ב-iOS וב-Android לפני העלייה לאוויר |
+| **iPhone ו-iPad לא נתמכים** | עובדים עם iPhone יכולים לפתוח את הלינק, אבל האתר לא מותאם ולא נבדק ב-iOS, ואין בו הנחיית התקנה | החלטה מכוונת (ADR-4). אם יידרש בעתיד, אפשר להוסיף תמיכה בלי שינוי מבני |
+| **הורדת קובץ בנייד** | כשהאתר מותקן ונפתח במסך מלא, ההורדה עלולה לעבוד אחרת מאשר בדפדפן רגיל | ההורדה מתבצעת עם קובץ מצורף רגיל מהשרת. כשהדפדפן תומך, נפתח תפריט השיתוף של מערכת ההפעלה (Web Share API עם קובץ). יש לבדוק את ההורדה בפועל ב-Android לפני העלייה לאוויר |
 | **ExcelJS** | קצב שחרור הגרסאות של הספרייה איטי | השימוש בה מצומצם ויציב (כתיבת גיליון אחד). אם יידרש, אפשר להחליף אותה ב-SheetJS בלי שינוי בממשק |
 
 ---
@@ -127,7 +127,7 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
   /api/saved-suppliers/route.ts        GET (רשימה), POST (שמירה)
   /api/saved-suppliers/[id]/route.ts   PATCH (סטטוס / הערה), DELETE
 /src/ui                         רכיבי UI: טופס החיפוש, כרטיס ספק, כרטיס ספק שמור, תגית סטטוס,
-                                בורר שפות, ניווט, חלון אישור, הודעות, הנחיית התקנה ל-iOS
+                                בורר שפות, ניווט, חלון אישור, הודעות
 /src/state                      ניהול מצב המסכים
 /src/services                   API client לכל ה-Endpoints, והורדת קובץ
 /shared                         קוד משותף ללקוח ולשרת:
@@ -175,15 +175,10 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 - אם הרשימה ריקה, מוצגת ההודעה Нет сохранённых поставщиков.
 
 **PWA:**
-- `app/manifest.ts` מגדיר `name`, `short_name`, `start_url: "/"`, `display: "standalone"`, צבעים ואייקונים. ב-`layout.tsx` מוגדר `apple-touch-icon` ל-iOS.
+- `app/manifest.ts` מגדיר `name`, `short_name`, `start_url: "/"`, `display: "standalone"`, צבעים ואייקונים.
 - אין Service Worker, כי ה-PRD מוציא מהטווח עבודה במצב לא מקוון וההתקנה לא מחייבת אותו.
 - ב-Android ובדפדפני Chromium, הדפדפן מציע התקנה באופן אוטומטי.
-- ב-iOS מוצגת פעם אחת, כשהאתר לא פתוח במצב `standalone`, הנחיה קצרה וניתנת לסגירה:
-  - RU: «Чтобы установить приложение, нажмите «Поделиться», затем «На экран „Домой“».»
-  - EN: «To install the app, tap Share, then "Add to Home Screen".»
-  - UK: «Щоб установити застосунок, натисніть «Поділитися», потім «На початковий екран».»
-
-  דגל "ההנחיה נסגרה" נשמר ב-`localStorage`.
+- אין הנחיית התקנה ל-iOS ואין `apple-touch-icon`, כי iOS לא נתמך (ADR-4).
 
 ### 2.4 מבנה ה-Backend
 
@@ -408,23 +403,22 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 ### 2.10 תשתיות, Hosting, פריסה ותצורה
 
 #### GitHub
-- Repository אחד, עם ענף ראשי `main` שמייצג את גרסת ה-Production.
-- כל שינוי נעשה בענף נפרד, ומוכנס דרך Pull Request. **Merge ל-`main` הוא האישור לפרסום ל-Production**, כולל השינויים ב-Database.
+- Repository אחד, עם ענף יחיד `main` שמייצג את גרסת ה-Production. אין ענפי עבודה ואין Pull Requests (ADR-1).
+- הפיתוח והבדיקות נעשים מקומית. **Push ל-`main`, שמתבצע רק כשהמשתמש מבקש "דחוף", הוא האישור לפרסום ל-Production**, כולל השינויים ב-Database.
 
 #### Vercel
 - חיבור Git Integration בין Vercel ל-Repository. Vercel מזהה Next.js אוטומטית.
 - **Push ל-`main`:** Build ופריסה אוטומטיים ל-Production.
-- **Push לכל ענף אחר או Pull Request:** פריסת **Preview** אוטומטית, עם URL ייעודי לבדיקה.
 - **Build Command:** `node scripts/migrate.mjs && next build`. הסקריפט מריץ קודם את ה-Migrations על ה-Database של אותה סביבה (ראו בהמשך), ורק אם הן הצליחו מתבצע ה-Build.
 - **אזור Functions:** `fra1` (פרנקפורט), קרוב ל-Database ולמשתמשים.
 - **Functions:** `export const maxDuration = 180` ב-`/api/search`. התוכנית Pro מאפשרת עד 800 שניות.
-- **Deployment Protection:** Vercel Authentication נשאר פעיל ב-Preview. כך רק חברי צוות ב-Vercel יכולים לפתוח URL של Preview. ה-Production פתוח לכל מי שיש לו את הלינק.
+- **Deployment Protection:** ה-Production פתוח לכל מי שיש לו את הלינק. Preview Deployments לא משמשים בתהליך העבודה.
 
 #### Supabase – שני פרויקטים נפרדים
 
 | | Development | Production |
 |---|---|---|
-| **תפקיד** | פיתוח ובדיקות. משמש את סביבת הפיתוח המקומית ואת כל ה-Preview Deployments | המערכת החיה והנתונים האמיתיים |
+| **תפקיד** | פיתוח ובדיקות. משמש את סביבת הפיתוח המקומית | המערכת החיה והנתונים האמיתיים |
 | **תוכנית** | Organization נפרד בתוכנית Free | Organization בתוכנית Pro (מ-25$ לחודש) |
 | **אזור** | `eu-central-1` (פרנקפורט) | `eu-central-1` (פרנקפורט) |
 
@@ -436,7 +430,7 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 
 #### פרטי גישה לכל סביבה והיכן הם נשמרים
 
-| משתנה | סוג | Development: Vercel (Development + Preview) ו-`.env.local` | Production: Vercel (Production) בלבד |
+| משתנה | סוג | Development: קובץ `.env` המקומי בלבד | Production: Vercel (Production) בלבד |
 |---|---|---|---|
 | `SUPABASE_URL` | הגדרה, צד שרת | ה-URL של פרויקט ה-Development | ה-URL של פרויקט ה-Production |
 | `SUPABASE_SECRET_KEY` | סוד, צד שרת | Secret Key של פרויקט ה-Development | Secret Key של פרויקט ה-Production |
@@ -447,13 +441,13 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 | `SEARCH_MAX_USES` | הגדרה | `8` | `8` |
 
 - **פרטי הגישה של ה-Production** נשמרים רק במשתני הסביבה של Vercel, בהיקף Production. הם לא נשמרים במחשב של אף אחד, ולא ב-Repository.
-- **סביבת הפיתוח המקומית** מחוברת רק לפרויקט ה-Development: `npx vercel env pull .env.local` מוריד רק את משתני ה-Development. הקובץ מוחרג מ-Git ב-`.gitignore`.
+- **סביבת הפיתוח המקומית** מחוברת רק לפרויקט ה-Development. ב-Repository יש `.env.example` עם שמות המשתנים בלי ערכים. המשתמש ממלא בעצמו את הערכים של ה-Development בקובץ `.env`, שמוחרג מ-Git ב-`.gitignore` (ADR-2).
 - **מחרוזת החיבור:** `SUPABASE_DB_URL` משתמשת ב-**Session Pooler** של Supabase, שתומך ב-IPv4 ולכן נגיש מסביבת ה-Build של Vercel. היא משמשת רק להרצת Migrations, ולא בזמן ריצה.
 - **אין הרצה מקומית של Supabase ואין Docker.** כל הפיתוח והבדיקות נעשים מול פרויקט ה-Development בענן.
 
 #### נוהל Database Migrations
 
-כל שינוי במבנה ה-Database נכתב כקובץ SQL חדש בתיקייה `supabase/migrations`. ה-Migrations רצות אוטומטית בתחילת כל Build ב-Vercel:
+כל שינוי במבנה ה-Database נכתב כקובץ SQL חדש בתיקייה `supabase/migrations`. אותו סקריפט מריץ את ה-Migrations גם מקומית מול ה-Development, עם הערכים מ-`.env`, וגם אוטומטית בתחילת כל Build ב-Vercel מול ה-Production:
 
 ```
 scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
@@ -465,11 +459,11 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 
 | שלב | מה קורה | מי מבצע |
 |---|---|---|
-| 1. כתיבה | יוצרים ענף חדש ומוסיפים קובץ Migration חדש (`npx supabase migration new <name>`). אסור לערוך קבצים שכבר הורצו | המפתח (או כלי ה-AI) |
-| 2. הרצה על Development | Push של הענף מפעיל Preview Build, וה-Build מריץ את ה-Migration על פרויקט ה-Development | אוטומטי (Vercel) |
-| 3. בדיקה | בודקים את ה-URL של ה-Preview, שמחובר ל-Development, ואת הנתונים ב-Dashboard של Supabase | המפתח והמשתמש |
-| 4. אישור | המשתמש מאשר את השינוי וממזג את ה-Pull Request ל-`main` | **המשתמש** |
-| 5. הרצה על Production | ה-Merge מפעיל Production Build. **ה-Build מריץ קודם את ה-Migration על פרויקט ה-Production, ורק אחר כך בונה ומפרסם את הקוד** | אוטומטי (Vercel) |
+| 1. כתיבה | מוסיפים קובץ Migration חדש (`npx supabase migration new <name>`). אסור לערוך קבצים שכבר הורצו | המפתח (או כלי ה-AI) |
+| 2. הרצה על Development | מריצים את `scripts/migrate.mjs` מקומית, מול פרויקט ה-Development שב-`.env` | המפתח (או כלי ה-AI) |
+| 3. בדיקה | בודקים את האפליקציה שרצה מקומית, ואת הנתונים ב-Dashboard של פרויקט ה-Development | המפתח והמשתמש |
+| 4. אישור | לפני ה-Push, כלי ה-AI עוצר ומודיע שה-Push יריץ את ה-Migration על Production. המשתמש מאשר במפורש | **המשתמש** |
+| 5. הרצה על Production | ה-Push ל-`main` מפעיל Production Build. **ה-Build מריץ קודם את ה-Migration על פרויקט ה-Production, ורק אחר כך בונה ומפרסם את הקוד** | אוטומטי (Vercel) |
 
 **למה גרסה חדשה לא תקדים את ה-Database שלה:**
 - ה-Migration וה-Build רצים באותו תהליך ובסדר קבוע: קודם ה-Migration, אחר כך ה-Build.
@@ -477,7 +471,6 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 
 **כללים:**
 - **Migrations תואמות לאחור:** מוסיפים טבלאות, עמודות או אינדקסים. מחיקה או שינוי שם של עמודה נעשים בשני שלבים, בשתי פריסות נפרדות. הסיבה היא שבזמן ה-Build הגרסה הקודמת עדיין פעילה מול ה-Database המעודכן.
-- **ענף אחד עם Migration בכל פעם:** כל ה-Previews משתמשים באותו פרויקט Development. אם שני ענפים יוסיפו Migrations במקביל, הם עלולים להתנגש.
 - **הפעלה ראשונה:** ה-Migration הראשונה יוצרת את הטבלה `saved_suppliers`, את האילוצים, את האינדקסים ואת ה-Trigger של `updated_at`, ומפעילה RLS.
 
 #### הגדרות שלא עוברות ב-Migrations
@@ -533,3 +526,27 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 - Anthropic – Web Search Tool (מחיר, `max_uses`, Dynamic Filtering, Citations): https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool
 - Anthropic – Models and Pricing: https://platform.claude.com/docs/en/about-claude/models/overview
 - SheetJS – הפצה מה-CDN של היצרן: https://docs.sheetjs.com/docs/getting-started/installation/nodejs
+
+---
+
+## החלטות מרכזיות (ADRs)
+
+### ADR-1: עבודה ישירה על `main`, בלי ענפים ו-Preview
+**הקשר:** התכנון המקורי כלל ענפי עבודה, ענף `develop`, Pull Requests ו-Preview Deployments. תהליך העבודה של הפרויקט (`CLAUDE.md`) מבוסס על בנייה והרצה מקומית, בדיקה של המשתמש, ואז Push ל-GitHub לפי בקשה.
+**החלטה:** יש ענף יחיד, `main`. הבדיקות לפני פרסום נעשות מקומית, מול פרויקט ה-Development. כל Push ל-`main` מתבצע רק כשהמשתמש מבקש "דחוף", ומפרסם ל-Production. ה-Migrations רצות אוטומטית ב-Production Build. לפני Push שכולל Migration חדשה, כלי ה-AI עוצר ומבקש אישור מפורש מהמשתמש.
+**השלכות:** תהליך פשוט יותר, בלי ענפים ובלי סביבת Preview. אין סביבת ביניים בענן, ולכן בדיקות שאפשר לבצע רק בכתובת אמיתית, כמו התקנת PWA ב-Android ו-WAF Rate Limiting, נעשות ישירות ב-Production אחרי ה-Push. שינוי במבנה ה-Database מגיע ל-Production כבר באבן הדרך שבה הוא נבנה, ולא רק בעלייה הסופית.
+
+### ADR-2: הגדרות מקומיות בקובץ `.env`
+**הקשר:** התכנון המקורי הוריד את משתני ה-Development מ-Vercel לקובץ `.env.local` (`vercel env pull`). תהליך העבודה של הפרויקט קובע `.env.example` שמועתק ל-`.env`, והמשתמש ממלא את הערכים בעצמו.
+**החלטה:** הערכים המקומיים נשמרים ב-`.env`, ומכילים רק את פרטי ה-Development. ב-Repository נשמר `.env.example` עם שמות המשתנים בלבד. ערכי ה-Production נשמרים רק ב-Vercel, בהיקף Production.
+**השלכות:** אין צורך בהתקנת Vercel CLI או בהתחברות אליו לצורך פיתוח מקומי. משתני ה-Development לא מוגדרים ב-Vercel. כל משתנה חדש נוסף ל-`.env.example`, והמשתמש מוסיף אותו בעצמו ל-`.env`.
+
+### ADR-3: רשימות נפתחות רגילות של הדפדפן
+**הקשר:** ה-Style Guide מציג רשימה נפתחת מעוצבת (רקע Green 50 ו-✓ לאפשרות הנבחרת), וצ'יפ צבעוני בתוך שדה הסטטוס. רכיב `<select>` רגיל לא יכול להציג את המראה הזה.
+**החלטה:** כל השדות (מדינה, עיר, תחום שירות וסטטוס) הם `<select>` רגיל. השדה הסגור מעוצב לפי ה-Style Guide. בשדה הסטטוס, הצ'יפ הצבעוני מוצג ליד השדה ולא בתוכו.
+**השלכות:** בנייד נפתח הבורר המוכר של המכשיר, הנגישות מובנית, ואין צורך ברכיב מותאם. הרשימה הפתוחה לא נראית בדיוק כמו ב-Style Guide.
+
+### ADR-4: תמיכה במחשב וב-Android בלבד, בלי iOS
+**הקשר:** התכנון המקורי כלל התקנה על מסך הבית גם ב-iPhone, עם הנחיית התקנה ייעודית ל-iOS, אייקון ל-iOS ובדיקות ב-iPhone. המשתמשת החליטה שהאפליקציה תותאם רק למחשב ול-Android.
+**החלטה:** הפלטפורמות הנתמכות הן מחשב ו-Android. אין הנחיית התקנה ל-iOS, אין `apple-touch-icon`, ואין בדיקות ב-iPhone או ב-iPad.
+**השלכות:** פחות קוד ופחות בדיקות. עובדים עם iPhone עדיין יכולים לפתוח את הלינק בדפדפן, אבל האתר לא מותאם ולא נבדק עבורם. אם יידרש בעתיד, אפשר להוסיף תמיכה ב-iOS בלי שינוי מבני.
