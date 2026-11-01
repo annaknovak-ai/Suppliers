@@ -1,0 +1,75 @@
+{
+  "app": {
+    "name": "Supplier Finder"
+  },
+  "nav": {
+    "label": "Navigation",
+    "search": "Search",
+    "saved": "Saved suppliers"
+  },
+  "language": {
+    "switcherLabel": "Interface language"
+  },
+  "search": {
+    "title": "Supplier search",
+    "hint": "Select a country, city and service type, then click \"Search\".",
+    "country": { "label": "Country", "placeholder": "Select a country" },
+    "city": { "label": "City", "placeholder": "Select a city" },
+    "service": { "label": "Service type", "placeholder": "Select a service type" },
+    "submit": "Search",
+    "loading": "Searching…",
+    "found": "Suppliers found: {{n}}",
+    "fewerThanFive": "Fewer than 5 suppliers found",
+    "notFound": "No suppliers found",
+    "error": "Search failed. Please try again.",
+    "retry": "Try again",
+    "export": "Export to Excel"
+  },
+  "criteria": {
+    "registration": "Registration / license",
+    "yearsActive": "3+ years in business",
+    "businessClients": "3+ business clients",
+    "status": {
+      "met": "Met",
+      "not_met": "Not met",
+      "not_verified": "Not verified"
+    },
+    "partial": "Does not meet all criteria"
+  },
+  "supplier": {
+    "notAvailable": "Not available",
+    "sources": "Sources",
+    "regNumber": "Reg. No.",
+    "yearsActive": "Years in business",
+    "businessClients": "Business clients",
+    "phone": "Phone",
+    "email": "Email",
+    "website": "Website",
+    "address": "Address",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "saved": {
+    "title": "Saved suppliers",
+    "total": "Total: {{n}}",
+    "empty": "No saved suppliers yet",
+    "savedAt": "Saved: {{date}}",
+    "statusLabel": "Status",
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "approved": "Approved",
+      "not_suitable": "Not suitable"
+    },
+    "noteLabel": "Note",
+    "notePlaceholder": "Add a note…",
+    "saveNote": "Save note",
+    "noteSaved": "Note saved",
+    "delete": "Delete",
+    "deleteConfirm": "Remove this supplier from saved suppliers?",
+    "cancel": "Cancel",
+    "loadError": "Could not load the list. Please try again.",
+    "saveError": "Could not save changes. Please try again.",
+    "retry": "Try again"
+  }
+}

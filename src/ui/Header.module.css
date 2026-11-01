@@ -1,0 +1,94 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "brand nav lang";
+  align-items: center;
+  column-gap: var(--space-6);
+  max-width: var(--content-max);
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.wordmark {
+  grid-area: brand;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.wordmarkText {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 32px;
+  white-space: nowrap;
+}
+
+.nav {
+  grid-area: nav;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-5);
+  height: 100%;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  border-bottom: 2px solid transparent;
+  border-top: 2px solid transparent;
+  font-size: var(--text-ui);
+  line-height: var(--lh-ui);
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: var(--green-700);
+}
+
+.navLink[aria-current="page"] {
+  color: var(--green-700);
+  font-weight: 600;
+  border-bottom-color: var(--green-700);
+}
+
+.lang {
+  grid-area: lang;
+}
+
+/* Mobile: two rows — brand + languages, then navigation. */
+@media (max-width: 767px) {
+  .inner {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand lang"
+      "nav nav";
+    height: auto;
+    row-gap: var(--space-1);
+    padding-top: var(--space-2);
+  }
+
+  .wordmarkText {
+    font-size: 22px;
+    line-height: 28px;
+  }
+
+  .nav {
+    height: 44px;
+    gap: var(--space-4);
+    overflow-x: auto;
+  }
+}

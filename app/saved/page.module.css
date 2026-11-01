@@ -1,0 +1,15 @@
+.main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-6) var(--gutter) var(--space-7);
+}
+
+.title {
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 767px) {
+  .main {
+    padding-top: var(--space-5);
+  }
+}
