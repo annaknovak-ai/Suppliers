@@ -7,10 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { getCity, getCountry, getService } from "@/shared/catalog";
 import type { SavedSupplier } from "@/shared/schemas";
-import { listSavedSuppliers } from "@/src/services/api";
+import { exportSavedSuppliers, listSavedSuppliers } from "@/src/services/api";
+import { deliverFile } from "@/src/services/download";
+import { useAppState } from "@/src/state/AppStateProvider";
 import { Banner } from "@/src/ui/Banner";
 import { Button } from "@/src/ui/Button";
 import { EmptyState } from "@/src/ui/EmptyState";
+import { DownloadIcon } from "@/src/ui/icons";
 import { ProgressBar } from "@/src/ui/ProgressBar";
 import { SavedFilter, savedHref, type SavedFilterValue } from "@/src/ui/SavedFilter";
 import { SavedSupplierCard } from "@/src/ui/SavedSupplierCard";
@@ -41,8 +44,10 @@ function filterFromParams(params: URLSearchParams): SavedFilterValue {
 
 function SavedScreen() {
   const { t } = useTranslation();
+  const { lang } = useAppState();
   const router = useRouter();
   const params = useSearchParams();
+  const [exportState, setExportState] = useState<"idle" | "exporting" | "error">("idle");
 
   // The URL holds the filter (the header link fills it from the search selection; a refresh keeps it).
   const filter = filterFromParams(new URLSearchParams(params.toString()));
@@ -56,6 +61,7 @@ function SavedScreen() {
     (patch: Partial<SavedFilterValue>) => {
       const next = { ...(pending.current ?? filterFromParams(new URLSearchParams(window.location.search))), ...patch };
       pending.current = next;
+      setExportState("idle");
       router.replace(savedHref(next), { scroll: false });
     },
     [router],
@@ -103,14 +109,48 @@ function SavedScreen() {
       ? list.items.filter((i) => i.cityId === filter.cityId && i.serviceId === filter.serviceId)
       : [];
 
+  async function handleExport() {
+    if (!filter.cityId || !filter.serviceId) return;
+    setExportState("exporting");
+    try {
+      // Column headers follow the interface language at the moment of export (PRD FR4.4, FR7.10).
+      const { blob, fileName } = await exportSavedSuppliers(filter.cityId, filter.serviceId, lang);
+      await deliverFile(blob, fileName);
+      setExportState("idle");
+    } catch {
+      setExportState("error");
+    }
+  }
+
   return (
     <main className={styles.main}>
       <div className={styles.heading}>
-        <h2>{t("saved.title")}</h2>
-        {list.status === "ready" && chosen && <span className={styles.count}>{t("saved.total", { n: shown.length })}</span>}
+        <div className={styles.title}>
+          <h2>{t("saved.title")}</h2>
+          {list.status === "ready" && chosen && (
+            <span className={styles.count}>{t("saved.total", { n: shown.length })}</span>
+          )}
+        </div>
+        {shown.length > 0 && (
+          <Button
+            variant="secondary"
+            icon={<DownloadIcon size={18} />}
+            onClick={handleExport}
+            disabled={exportState === "exporting"}
+            aria-busy={exportState === "exporting"}
+          >
+            {t("search.export")}
+          </Button>
+        )}
       </div>
 
       <SavedFilter value={filter} onChange={changeFilter} />
+
+      {exportState === "error" && shown.length > 0 && (
+        <div className={styles.exportError}>
+          <Banner variant="error" message={t("search.exportError")} />
+        </div>
+      )}
 
       <div className={styles.body} aria-live="polite" aria-busy={list.status === "loading"}>
         {list.status === "loading" && <ProgressBar label={t("saved.title")} />}

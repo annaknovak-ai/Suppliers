@@ -94,6 +94,7 @@
     "city": "City",
     "service": "Service type",
     "searchDate": "Search date",
+    "exportDate": "Export date",
     "columns": {
       "name": "Name",
       "description": "Description",
@@ -109,7 +110,10 @@
       "yearsActiveCriterion": "3+ years in business",
       "businessClientsCriterion": "3+ business clients",
       "meetsAll": "Meets all criteria",
-      "sources": "Sources"
+      "sources": "Sources",
+      "status": "Status",
+      "note": "Note",
+      "savedAt": "Saved on"
     },
     "yes": "Yes",
     "no": "No"

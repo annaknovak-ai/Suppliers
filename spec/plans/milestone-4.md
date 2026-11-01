@@ -15,8 +15,8 @@
 
 אני עוצר ומדריך צעד אחר צעד, בשפה פשוטה. **לא מבקשים להדביק בשיחה אף מפתח, סיסמה או מחרוזת חיבור.**
 
-1. **Development:** Organization חדש בתוכנית Free ← פרויקט באזור Frankfurt (`eu-central-1`) ← סיסמת Database חזקה (נשמרת אצל המשתמשת).
-2. **Production:** Organization נפרד בתוכנית Pro ← פרויקט באזור Frankfurt.
+1. **Development:** Organization בתוכנית Free ← פרויקט באזור Frankfurt (`eu-central-1`) ← סיסמת Database חזקה (נשמרת אצל המשתמשת).
+2. **Production:** פרויקט נוסף באותו Organization, באזור Frankfurt (עודכן: ARCHITECTURE.md ADR-8, פרויקט לימודי).
 3. **בכל אחד מהשניים:**
    - Settings → API Keys: יצירת Secret Key ייעודי.
    - Authentication → Sign In / Providers: כיבוי "Allow new users to sign up".
@@ -221,3 +221,11 @@ shared/i18n/ru|en|uk.json                  בדיקה – מפתחות saved.* �
 - הבחירה נשמרת בכתובת הדף (`?country=&city=&service=`), והיא מקור האמת היחיד. הקישור «Сохранённые поставщики» ב-Header נבנה מהבחירה בטופס החיפוש, או מהחיפוש האחרון.
 - הסינון נעשה בלקוח; ה-API וה-Database לא השתנו. «Всего: N» סופר רק את הספקים שמוצגים.
 - כל עוד לא נבחרו עיר ותחום מוצג מצב ריק עם «Выберите город и вид услуги» (מפתח `saved.choose` בשלוש השפות).
+
+## 15. תוספת אחרי אישור M4 – ייצוא הרשימה השמורה ל-Excel
+
+לבקשת המשתמשת (PRD FR7.10, ARCHITECTURE.md ADR-9):
+- `GET /api/saved-suppliers/export?city=&service=&lang=` קורא מה-Database את הספקים של העיר והתחום (`listSavedFor` ב-`/server/db`) ויוצר xlsx (`buildSavedSuppliersWorkbook` ב-`/server/excel`). קלט לא תקין או רשימה ריקה מחזירים `400`.
+- בראש הגיליון תאריך הייצוא; בסוף כל שורה הסטטוס, ההערה ותאריך השמירה. מפתחות חדשים: `excel.exportDate`, `excel.columns.status/note/savedAt` בשלוש השפות.
+- שם הקובץ `saved_suppliers_<country>_<city>_<service>_<date>.xlsx`; הלקוח לוקח אותו מ-`Content-Disposition` ומוסר את הקובץ עם `deliverFile`.
+- הכפתור בשורת הכותרת של `/saved`, רק כשמוצג לפחות ספק אחד; כשל מציג את באנר השגיאה של הייצוא.

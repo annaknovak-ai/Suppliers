@@ -89,6 +89,18 @@ export async function listSaved(): Promise<SavedSupplier[]> {
   return (data as Row[]).map(toSavedSupplier);
 }
 
+// Saved suppliers of one city and service, newest first (saved list export).
+export async function listSavedFor(cityId: string, serviceId: string): Promise<SavedSupplier[]> {
+  const { data, error } = await db()
+    .from(TABLE)
+    .select("*")
+    .eq("city_id", cityId)
+    .eq("service_id", serviceId)
+    .order("saved_at", { ascending: false });
+  if (error) fail("listFor", error);
+  return (data as Row[]).map(toSavedSupplier);
+}
+
 // Existing row for the same supplier: same city and service, and the same name key or website domain.
 async function findExisting(search: SearchRequest, key: string, domain: string | null): Promise<Row | null> {
   const base = () => db().from(TABLE).select("*").eq("city_id", search.cityId).eq("service_id", search.serviceId);

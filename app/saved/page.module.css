@@ -7,9 +7,21 @@
 .heading {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-4);
+}
+
+.exportError {
+  margin-bottom: var(--space-3);
 }
 
 .count {

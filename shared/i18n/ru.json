@@ -94,6 +94,7 @@
     "city": "Город",
     "service": "Вид услуги",
     "searchDate": "Дата поиска",
+    "exportDate": "Дата выгрузки",
     "columns": {
       "name": "Название",
       "description": "Описание",
@@ -109,7 +110,10 @@
       "yearsActiveCriterion": "3+ лет работы",
       "businessClientsCriterion": "3+ бизнес-клиентов",
       "meetsAll": "Соответствует всем условиям",
-      "sources": "Источники"
+      "sources": "Источники",
+      "status": "Статус",
+      "note": "Заметка",
+      "savedAt": "Дата сохранения"
     },
     "yes": "Да",
     "no": "Нет"

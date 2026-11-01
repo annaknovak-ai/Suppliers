@@ -94,6 +94,7 @@
     "city": "Місто",
     "service": "Вид послуги",
     "searchDate": "Дата пошуку",
+    "exportDate": "Дата експорту",
     "columns": {
       "name": "Назва",
       "description": "Опис",
@@ -109,7 +110,10 @@
       "yearsActiveCriterion": "3+ років роботи",
       "businessClientsCriterion": "3+ бізнес-клієнтів",
       "meetsAll": "Відповідає всім умовам",
-      "sources": "Джерела"
+      "sources": "Джерела",
+      "status": "Статус",
+      "note": "Нотатка",
+      "savedAt": "Дата збереження"
     },
     "yes": "Так",
     "no": "Ні"

@@ -7,3 +7,8 @@ export const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsh
 export function exportFileName(search: SearchRequest, searchedAt: string): string {
   return `suppliers_${search.countryId}_${search.cityId}_${search.serviceId}_${searchedAt.slice(0, 10)}.xlsx`;
 }
+
+// saved_suppliers_<country>_<city>_<service>_<YYYY-MM-DD>.xlsx, dated by the export day.
+export function savedExportFileName(search: SearchRequest, exportedAt: string): string {
+  return `saved_${exportFileName(search, exportedAt)}`;
+}

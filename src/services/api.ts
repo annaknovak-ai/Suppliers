@@ -63,6 +63,19 @@ export async function deleteSavedSupplier(id: string): Promise<void> {
   if (!response.ok && response.status !== 404) throw new ApiRequestError(response.status);
 }
 
+// The saved suppliers of one city and service as an xlsx file, with the file name chosen by the server.
+export async function exportSavedSuppliers(
+  cityId: string,
+  serviceId: string,
+  lang: string,
+): Promise<{ blob: Blob; fileName: string }> {
+  const query = new URLSearchParams({ city: cityId, service: serviceId, lang });
+  const response = await fetch(`/api/saved-suppliers/export?${query}`, { cache: "no-store" });
+  if (!response.ok) throw new ApiRequestError(response.status);
+  const fileName = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ?? "saved_suppliers.xlsx";
+  return { blob: await response.blob(), fileName };
+}
+
 function savedFetch(url: string, init: RequestInit): Promise<Response> {
   return fetch(url, {
     ...init,

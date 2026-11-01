@@ -1,20 +1,23 @@
-// Builds the search results workbook: search parameters on top, then one row per supplier (ARCHITECTURE 2.7, PRD F4).
+// Builds the Excel workbooks: search results (PRD F4) and the saved list of one city and service (PRD F7).
+// Parameters on top, then one row per supplier (ARCHITECTURE 2.7).
 import "server-only";
 import ExcelJS from "exceljs";
-import { getCity, getCountry, getService } from "@/shared/catalog";
+import { getCity, getCountry, getService, type Lang } from "@/shared/catalog";
 import en from "@/shared/i18n/en.json";
 import ru from "@/shared/i18n/ru.json";
 import uk from "@/shared/i18n/uk.json";
 import { safeHttpUrl, urlKey } from "@/shared/normalize";
-import type { ExportRequest, Supplier } from "@/shared/schemas";
+import type { ExportRequest, SavedSupplier, SearchRequest, Supplier } from "@/shared/schemas";
 
 const TEXTS = { ru, en, uk };
 
 type Texts = typeof ru;
 type CellValue = string | number | { text: string; hyperlink: string };
+type ColumnKey = keyof Texts["excel"]["columns"];
+type ExportedSupplier = Omit<Supplier, "savedId">;
 
 // Column order and widths; header labels come from the "excel.columns" translations.
-const COLUMNS: { key: keyof Texts["excel"]["columns"]; width: number }[] = [
+const COLUMNS: { key: ColumnKey; width: number }[] = [
   { key: "name", width: 28 },
   { key: "description", width: 45 },
   { key: "phone", width: 18 },
@@ -32,8 +35,15 @@ const COLUMNS: { key: keyof Texts["excel"]["columns"]; width: number }[] = [
   { key: "sources", width: 60 },
 ];
 
+// Extra columns of the saved list export.
+const SAVED_COLUMNS: { key: ColumnKey; width: number }[] = [
+  { key: "status", width: 16 },
+  { key: "note", width: 45 },
+  { key: "savedAt", width: 14 },
+];
+
 // All source URLs of a supplier (general and per criterion), http(s) only, without duplicates.
-function supplierSourceUrls(supplier: Supplier): string[] {
+function supplierSourceUrls(supplier: ExportedSupplier): string[] {
   const all = [
     ...supplier.sources.map((s) => s.url),
     ...Object.values(supplier.criteria).flatMap((c) => c.sourceUrls),
@@ -50,7 +60,7 @@ function supplierSourceUrls(supplier: Supplier): string[] {
   return urls;
 }
 
-function supplierRow(supplier: Supplier, t: Texts): CellValue[] {
+function supplierRow(supplier: ExportedSupplier, t: Texts): CellValue[] {
   const na = t.supplier.notAvailable;
   const orNa = (value: string | number | null) => (value === null || value === "" ? na : value);
   const website = safeHttpUrl(supplier.website);
@@ -74,19 +84,28 @@ function supplierRow(supplier: Supplier, t: Texts): CellValue[] {
   ];
 }
 
-export async function buildSuppliersWorkbook({ search, response, uiLanguage }: ExportRequest): Promise<Buffer> {
-  const t = TEXTS[uiLanguage];
+type WorkbookSpec = {
+  lang: Lang;
+  search: SearchRequest;
+  dateLabel: string;
+  date: string;
+  columns: { key: ColumnKey; width: number }[];
+  rows: CellValue[][];
+};
+
+async function buildWorkbook({ lang, search, dateLabel, date, columns, rows }: WorkbookSpec): Promise<Buffer> {
+  const t = TEXTS[lang];
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet(t.app.name);
 
-  sheet.addRow([t.excel.country, getCountry(search.countryId)?.names[uiLanguage] ?? search.countryId]);
-  sheet.addRow([t.excel.city, getCity(search.cityId)?.names[uiLanguage] ?? search.cityId]);
-  sheet.addRow([t.excel.service, getService(search.serviceId)?.names[uiLanguage] ?? search.serviceId]);
-  sheet.addRow([t.excel.searchDate, response.searchedAt.slice(0, 10)]);
+  sheet.addRow([t.excel.country, getCountry(search.countryId)?.names[lang] ?? search.countryId]);
+  sheet.addRow([t.excel.city, getCity(search.cityId)?.names[lang] ?? search.cityId]);
+  sheet.addRow([t.excel.service, getService(search.serviceId)?.names[lang] ?? search.serviceId]);
+  sheet.addRow([dateLabel, date]);
   for (let i = 1; i <= 4; i++) sheet.getCell(i, 1).font = { bold: true };
   sheet.addRow([]);
 
-  const header = sheet.addRow(COLUMNS.map((c) => t.excel.columns[c.key]));
+  const header = sheet.addRow(columns.map((c) => t.excel.columns[c.key]));
   header.font = { bold: true };
   header.alignment = { vertical: "top", wrapText: true };
   header.eachCell((cell) => {
@@ -94,14 +113,49 @@ export async function buildSuppliersWorkbook({ search, response, uiLanguage }: E
   });
   sheet.views = [{ state: "frozen", ySplit: header.number }];
 
-  for (const supplier of response.suppliers) {
-    const row = sheet.addRow(supplierRow(supplier, t));
+  for (const values of rows) {
+    const row = sheet.addRow(values);
     row.alignment = { vertical: "top", wrapText: true };
   }
 
-  COLUMNS.forEach((c, i) => {
+  columns.forEach((c, i) => {
     sheet.getColumn(i + 1).width = c.width;
   });
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+export function buildSuppliersWorkbook({ search, response, uiLanguage }: ExportRequest): Promise<Buffer> {
+  const t = TEXTS[uiLanguage];
+  return buildWorkbook({
+    lang: uiLanguage,
+    search,
+    dateLabel: t.excel.searchDate,
+    date: response.searchedAt.slice(0, 10),
+    columns: COLUMNS,
+    rows: response.suppliers.map((s) => supplierRow(s, t)),
+  });
+}
+
+// Saved suppliers of one city and service, with status, note and save date (PRD FR7.10).
+export function buildSavedSuppliersWorkbook(
+  search: SearchRequest,
+  items: SavedSupplier[],
+  lang: Lang,
+  exportedAt: string,
+): Promise<Buffer> {
+  const t = TEXTS[lang];
+  return buildWorkbook({
+    lang,
+    search,
+    dateLabel: t.excel.exportDate,
+    date: exportedAt.slice(0, 10),
+    columns: [...COLUMNS, ...SAVED_COLUMNS],
+    rows: items.map((item) => [
+      ...supplierRow(item, t),
+      t.saved.status[item.status],
+      item.note || "",
+      item.savedAt.slice(0, 10),
+    ]),
+  });
 }
