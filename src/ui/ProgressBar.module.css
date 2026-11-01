@@ -1,0 +1,34 @@
+.track {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 6px;
+  background: var(--line);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--green-700);
+  border-radius: var(--radius-pill);
+  animation: slide 1.6s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    animation: none;
+    width: 60%;
+  }
+}

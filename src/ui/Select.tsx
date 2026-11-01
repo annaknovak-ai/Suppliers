@@ -11,13 +11,25 @@ type SelectProps = {
   options: Option[];
   value: string | null;
   disabled?: boolean;
+  labelHidden?: boolean;
+  className?: string;
   onChange: (value: string | null) => void;
 };
 
-export function Select({ id, label, placeholder, options, value, disabled, onChange }: SelectProps) {
+export function Select({
+  id,
+  label,
+  placeholder,
+  options,
+  value,
+  disabled,
+  labelHidden,
+  className,
+  onChange,
+}: SelectProps) {
   return (
-    <div className={styles.field}>
-      <label htmlFor={id} className={styles.label}>
+    <div className={[styles.field, className ?? ""].filter(Boolean).join(" ")}>
+      <label htmlFor={id} className={labelHidden ? "visually-hidden" : styles.label}>
         {label}
       </label>
       <div className={styles.control}>

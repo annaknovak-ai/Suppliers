@@ -13,9 +13,18 @@
   "search": {
     "title": "Supplier search",
     "hint": "Select a country, city and service type, then click \"Search\".",
-    "country": { "label": "Country", "placeholder": "Select a country" },
-    "city": { "label": "City", "placeholder": "Select a city" },
-    "service": { "label": "Service type", "placeholder": "Select a service type" },
+    "country": {
+      "label": "Country",
+      "placeholder": "Select a country"
+    },
+    "city": {
+      "label": "City",
+      "placeholder": "Select a city"
+    },
+    "service": {
+      "label": "Service type",
+      "placeholder": "Select a service type"
+    },
     "submit": "Search",
     "loading": "Searching…",
     "found": "Suppliers found: {{n}}",
@@ -23,7 +32,8 @@
     "notFound": "No suppliers found",
     "error": "Search failed. Please try again.",
     "retry": "Try again",
-    "export": "Export to Excel"
+    "export": "Export to Excel",
+    "barLabel": "Supplier search"
   },
   "criteria": {
     "registration": "Registration / license",
@@ -34,7 +44,8 @@
       "not_met": "Not met",
       "not_verified": "Not verified"
     },
-    "partial": "Does not meet all criteria"
+    "partial": "Does not meet all criteria",
+    "chipLabel": "{{name}}: {{status}}"
   },
   "supplier": {
     "notAvailable": "Not available",
@@ -47,7 +58,8 @@
     "website": "Website",
     "address": "Address",
     "save": "Save",
-    "saved": "Saved"
+    "saved": "Saved",
+    "sourcesToggle": "Sources ({{n}})"
   },
   "saved": {
     "title": "Saved suppliers",
@@ -71,5 +83,8 @@
     "loadError": "Could not load the list. Please try again.",
     "saveError": "Could not save changes. Please try again.",
     "retry": "Try again"
+  },
+  "results": {
+    "heading": "{{service}} – {{city}}"
   }
 }

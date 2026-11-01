@@ -21,3 +21,29 @@
     padding: var(--space-4);
   }
 }
+
+/* Horizontal bar above the results; the service field is wider. */
+.bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  max-width: 900px;
+}
+
+.barSubmit {
+  height: 40px;
+  padding: 0 var(--space-5);
+}
+
+@media (max-width: 767px) {
+  .bar {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: none;
+  }
+
+  .barSubmit {
+    width: 100%;
+  }
+}
+.serviceField { min-width: 0; }
