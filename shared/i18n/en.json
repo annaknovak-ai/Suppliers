@@ -27,6 +27,12 @@
     },
     "submit": "Search",
     "loading": "Searching…",
+    "stages": {
+      "sources": "Searching open sources on the web for suppliers",
+      "criteria": "Checking registration, years in business and business clients",
+      "results": "Selecting the best matches and preparing the results",
+      "duration": "This usually takes up to a minute."
+    },
     "found": "Suppliers found: {{n}}",
     "fewerThanFive": "Fewer than 5 suppliers found",
     "notFound": "No suppliers found",

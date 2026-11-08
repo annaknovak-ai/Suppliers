@@ -1,7 +1,7 @@
 "use client";
 
 // Results area of the search screen: heading, screen states and supplier cards (DESIGN 1.2).
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getCity, getService } from "@/shared/catalog";
 import { exportFileName } from "@/shared/exportFileName";
@@ -24,12 +24,7 @@ export function ResultsView() {
 
   return (
     <section className={styles.results} aria-live="polite" aria-busy={status === "loading"}>
-      {status === "loading" && (
-        <div className={styles.loading}>
-          <p>{t("search.loading")}</p>
-          <ProgressBar label={t("search.loading")} />
-        </div>
-      )}
+      {status === "loading" && <SearchProgress key={`${request?.cityId}-${request?.serviceId}`} />}
 
       {status === "error" && (
         <Banner
@@ -45,6 +40,32 @@ export function ResultsView() {
 
       {status === "success" && request && response && <Results request={request} response={response} />}
     </section>
+  );
+}
+
+const STAGE_KEYS = ["search.stages.sources", "search.stages.criteria", "search.stages.results"];
+// When each later stage is shown. The search is one long call with no progress signal,
+// so these follow its typical course (35-52 seconds measured), not live events.
+const STAGE_STARTS_MS = [15_000, 35_000];
+
+function SearchProgress() {
+  const { t } = useTranslation();
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const timers = STAGE_STARTS_MS.map((ms, i) => setTimeout(() => setStage(i + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <div className={styles.loading}>
+      <p>{t("search.loading")}</p>
+      <ProgressBar label={t("search.loading")} />
+      <div>
+        <p>{t(STAGE_KEYS[stage])}</p>
+        <p className={styles.duration}>{t("search.stages.duration")}</p>
+      </div>
+    </div>
   );
 }
 

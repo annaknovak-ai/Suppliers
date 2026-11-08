@@ -27,9 +27,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const response = await runSearch(parsed.data);
+    // request.signal fires when the browser leaves (refresh, new search), so an abandoned search stops costing money.
+    const response = await runSearch(parsed.data, request.signal);
     return Response.json(response, { headers: NO_STORE });
   } catch (e) {
+    if (request.signal.aborted) {
+      console.info(JSON.stringify({ event: "search_cancelled" }));
+      return error("cancelled", 499);
+    }
     if (e instanceof AiTimeoutError) return error("timeout", 504);
     console.error(JSON.stringify({ event: "search_failed", message: e instanceof Error ? e.message : String(e) }));
     return error("ai_error", 502);

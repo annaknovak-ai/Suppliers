@@ -118,8 +118,13 @@ async function runOnce(country: Country, city: City, service: ServiceType, signa
 }
 
 // One retry when the model does not return a valid result (ARCHITECTURE 2.6).
-export async function searchWithAi(country: Country, city: City, service: ServiceType): Promise<AiSearchResult> {
-  const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+export async function searchWithAi(
+  country: Country,
+  city: City,
+  service: ServiceType,
+  cancelSignal: AbortSignal,
+): Promise<AiSearchResult> {
+  const signal = AbortSignal.any([AbortSignal.timeout(REQUEST_TIMEOUT_MS), cancelSignal]);
   try {
     try {
       return await runOnce(country, city, service, signal);

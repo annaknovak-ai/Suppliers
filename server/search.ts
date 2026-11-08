@@ -18,13 +18,13 @@ async function markSaved(request: SearchRequest, response: SearchResponse): Prom
   }
 }
 
-export async function runSearch(request: SearchRequest): Promise<SearchResponse> {
+export async function runSearch(request: SearchRequest, cancelSignal: AbortSignal): Promise<SearchResponse> {
   const country = getCountry(request.countryId)!;
   const city = getCity(request.cityId)!;
   const service = getService(request.serviceId)!;
 
   const startedAt = Date.now();
-  const result = await searchWithAi(country, city, service);
+  const result = await searchWithAi(country, city, service, cancelSignal);
   const response = applyRules(result.output.suppliers, result.allowedUrls);
   await markSaved(request, response);
 

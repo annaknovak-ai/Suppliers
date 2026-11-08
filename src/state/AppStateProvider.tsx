@@ -1,13 +1,15 @@
 "use client";
 
 // Layout-level app state: interface language, search form selections and the last search.
-// Kept above the routes so navigating between screens does not reset it.
-import { createContext, useCallback, useContext, useMemo, useReducer, useRef, useState } from "react";
+// Kept above the routes so navigating between screens does not reset it, and remembered in the browser
+// so a refresh does not reset it either.
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import type { Lang } from "@/shared/catalog";
 import { createI18n, DEFAULT_LANG } from "@/shared/i18n";
 import type { SearchRequest, SearchResponse } from "@/shared/schemas";
 import { saveSupplier, searchSuppliers } from "@/src/services/api";
+import { loadLang, loadSearch, storeLang, storeSearch, type StoredSearch } from "./browserMemory";
 
 export type SearchForm = {
   countryId: string | null;
@@ -26,10 +28,13 @@ type State = {
   lang: Lang;
   form: SearchForm;
   search: SearchState;
+  // False until the remembered search has been read back from the browser.
+  restored: boolean;
 };
 
 type Action =
   | { type: "setLang"; lang: Lang }
+  | { type: "restore"; lang: Lang | null; stored: StoredSearch | null }
   | { type: "setCountry"; countryId: string | null }
   | { type: "setCity"; cityId: string | null }
   | { type: "setService"; serviceId: string | null }
@@ -42,12 +47,21 @@ const initialState: State = {
   lang: DEFAULT_LANG,
   form: { countryId: null, cityId: null, serviceId: null },
   search: { status: "idle", request: null, response: null },
+  restored: false,
 };
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "setLang":
       return { ...state, lang: action.lang };
+    case "restore":
+      return {
+        ...state,
+        restored: true,
+        lang: action.lang ?? state.lang,
+        form: action.stored?.form ?? state.form,
+        search: action.stored?.last ? { status: "success", ...action.stored.last } : state.search,
+      };
     case "setCountry":
       // Changing the country always resets the city (PRD 3ג).
       return { ...state, form: { ...state.form, countryId: action.countryId, cityId: null } };
@@ -88,14 +102,30 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const [i18n] = useState(createI18n);
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const setLang = useCallback(
-    (lang: Lang) => {
-      i18n.changeLanguage(lang);
-      document.documentElement.lang = lang;
-      dispatch({ type: "setLang", lang });
-    },
-    [i18n],
-  );
+  const setLang = useCallback((lang: Lang) => {
+    dispatch({ type: "setLang", lang });
+    storeLang(lang);
+  }, []);
+
+  // The page is first rendered with the defaults, so the remembered state is applied right after it loads.
+  useEffect(() => {
+    dispatch({ type: "restore", lang: loadLang(), stored: loadSearch() });
+  }, []);
+
+  // i18next follows the committed state: changing it any earlier would make the parts of the page
+  // React is still hydrating render a different language than the server sent.
+  const { lang: activeLang, form, search, restored } = state;
+  useEffect(() => {
+    i18n.changeLanguage(activeLang);
+    document.documentElement.lang = activeLang;
+  }, [i18n, activeLang]);
+
+  // Starts only after the restore above, so the empty defaults never overwrite what was remembered.
+  useEffect(() => {
+    if (!restored) return;
+    const { status, request, response } = search;
+    storeSearch({ form, last: status === "success" && request && response ? { request, response } : null });
+  }, [restored, form, search]);
 
   // A new search aborts the previous one; only the latest request may update the state.
   const controllerRef = useRef<AbortController | null>(null);
