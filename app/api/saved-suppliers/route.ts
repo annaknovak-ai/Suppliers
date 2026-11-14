@@ -1,7 +1,8 @@
-// GET /api/saved-suppliers – the shared saved list; POST – saves a supplier from the results (ARCHITECTURE 2.7).
+// GET /api/saved-suppliers – the signed-in user's saved list; POST – saves a supplier from the results (ARCHITECTURE 2.7).
 import { connection } from "next/server";
 import { isValidSelection } from "@/shared/catalog";
 import { SaveSupplierRequestSchema, type ApiError, type SavedSuppliersList } from "@/shared/schemas";
+import { getUser } from "@/server/auth";
 import { insertSaved, listSaved } from "@/server/db";
 
 // Runs on the Node.js runtime (the default; `runtime` config is not allowed with cacheComponents, ADR-5).
@@ -19,8 +20,10 @@ function logDbError(e: unknown) {
 export async function GET() {
   // Always read the database at request time; never prerender this list.
   await connection();
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
   try {
-    const items = await listSaved();
+    const items = await listSaved(user.id);
     return Response.json({ items, total: items.length } satisfies SavedSuppliersList, { headers: NO_STORE });
   } catch (e) {
     logDbError(e);
@@ -29,6 +32,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
   if (!isValidSelection(search.countryId, search.cityId, search.serviceId)) return error("invalid_input", 400);
 
   try {
-    const { conflict, saved } = await insertSaved(search, supplier);
+    const { conflict, saved } = await insertSaved(user.id, search, supplier);
     return Response.json(saved, { status: conflict ? 409 : 201, headers: NO_STORE });
   } catch (e) {
     logDbError(e);

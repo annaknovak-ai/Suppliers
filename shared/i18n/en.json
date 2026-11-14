@@ -125,5 +125,48 @@
     },
     "yes": "Yes",
     "no": "No"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Last updated: {{date}}",
+    "intro": "Supplier Finder is a service for finding building maintenance suppliers in Ukraine and Moldova. This page explains what data we receive, how we use it and where it is stored.",
+    "sections": {
+      "account": {
+        "title": "Google account data",
+        "body": "When you sign in with Google, we receive only your account ID, email address and name. We never receive your password and do not request access to any other data in your Google account."
+      },
+      "saved": {
+        "title": "Saved suppliers and notes",
+        "body": "The suppliers you save, their statuses and your notes are kept in your personal list. Only you can see them."
+      },
+      "use": {
+        "title": "How we use the data",
+        "body": "Your account data is used only to sign you in, to show your email address in the app and to keep your list separate from other users' lists. We do not sell data, do not share it with third parties for advertising, and do not use advertising or analytics. Our use of information received from Google adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+      },
+      "search": {
+        "title": "Supplier search",
+        "body": "To search the web, the selected country, city and service type are sent to OpenAI. None of your personal data is sent. Search results are kept for up to 30 days and are available to all users of the app."
+      },
+      "storage": {
+        "title": "Where data is stored, and cookies",
+        "body": "Data is stored in a Supabase database in the European Union (Frankfurt), and the app is hosted on Vercel. We use only the cookies needed to keep you signed in. Your chosen language and last search are stored only in your browser."
+      },
+      "deletion": {
+        "title": "Deleting data",
+        "body": "You can delete any saved supplier in the app. To delete your account and all data related to it, email us and we will delete it."
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "For privacy questions, email:"
+      }
+    }
+  },
+  "login": {
+    "hint": "Sign in with your Google account to search for suppliers and keep your own saved list.",
+    "button": "Sign in with Google",
+    "error": "Sign-in failed. Please try again."
+  },
+  "auth": {
+    "signOut": "Sign out"
   }
 }

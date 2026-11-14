@@ -1,0 +1,39 @@
+.main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-7) var(--gutter) var(--space-8);
+}
+
+.article {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.updated {
+  font-size: var(--text-caption);
+  color: var(--muted);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.section a {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  .main {
+    padding-top: var(--space-5);
+  }
+}

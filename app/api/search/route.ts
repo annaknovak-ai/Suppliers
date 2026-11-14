@@ -3,6 +3,7 @@ import { isValidSelection } from "@/shared/catalog";
 import { SearchRequestSchema, type ApiError } from "@/shared/schemas";
 import { AiTimeoutError } from "@/server/ai/client";
 import { runSearch } from "@/server/search";
+import { getUser } from "@/server/auth";
 
 // Runs on the Node.js runtime (the default; `runtime` config is not allowed with cacheComponents, ADR-5).
 export const maxDuration = 180;
@@ -14,6 +15,9 @@ function error(code: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -28,7 +32,7 @@ export async function POST(request: Request) {
 
   try {
     // request.signal fires when the browser leaves (refresh, new search), so an abandoned search stops costing money.
-    const response = await runSearch(parsed.data, request.signal);
+    const response = await runSearch(parsed.data, user.id, request.signal);
     return Response.json(response, { headers: NO_STORE });
   } catch (e) {
     if (request.signal.aborted) {

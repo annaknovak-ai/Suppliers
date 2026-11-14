@@ -2,6 +2,7 @@
 import { isValidSelection } from "@/shared/catalog";
 import { exportFileName, XLSX_MIME } from "@/shared/exportFileName";
 import { ExportRequestSchema, type ApiError } from "@/shared/schemas";
+import { getUser } from "@/server/auth";
 import { buildSuppliersWorkbook } from "@/server/excel";
 
 // Runs on the Node.js runtime (the default; `runtime` config is not allowed with cacheComponents, ADR-5).
@@ -13,6 +14,9 @@ function error(code: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
+
   let body: unknown;
   try {
     body = await request.json();

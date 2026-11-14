@@ -18,9 +18,23 @@ export class ApiRequestError extends Error {
   }
 }
 
+// Every API call goes through here: a 401 (not signed in, or the session expired) sends the browser to the
+// sign-in screen and back to this page afterwards (ARCHITECTURE 2.3). The page is leaving, so no error is shown.
+async function apiFetch(url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, init);
+  if (response.status === 401) {
+    const here = window.location.pathname + window.location.search;
+    // A full page load on purpose: it drops the in-memory state of the signed-out session.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+    throw new ApiRequestError(401);
+  }
+  return response;
+}
+
 // Throws on any non-200 response or network failure; aborts with the caller's signal or after the client timeout.
 export async function searchSuppliers(request: SearchRequest, signal: AbortSignal): Promise<SearchResponse> {
-  const response = await fetch("/api/search", {
+  const response = await apiFetch("/api/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
@@ -70,14 +84,14 @@ export async function exportSavedSuppliers(
   lang: string,
 ): Promise<{ blob: Blob; fileName: string }> {
   const query = new URLSearchParams({ city: cityId, service: serviceId, lang });
-  const response = await fetch(`/api/saved-suppliers/export?${query}`, { cache: "no-store" });
+  const response = await apiFetch(`/api/saved-suppliers/export?${query}`, { cache: "no-store" });
   if (!response.ok) throw new ApiRequestError(response.status);
   const fileName = /filename="([^"]+)"/.exec(response.headers.get("Content-Disposition") ?? "")?.[1] ?? "saved_suppliers.xlsx";
   return { blob: await response.blob(), fileName };
 }
 
 function savedFetch(url: string, init: RequestInit): Promise<Response> {
-  return fetch(url, {
+  return apiFetch(url, {
     ...init,
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
@@ -87,7 +101,7 @@ function savedFetch(url: string, init: RequestInit): Promise<Response> {
 
 // Returns the generated xlsx file; throws on any non-200 response or network failure.
 export async function exportSuppliers(request: ExportRequest): Promise<Blob> {
-  const response = await fetch("/api/export", {
+  const response = await apiFetch("/api/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),

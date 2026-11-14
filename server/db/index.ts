@@ -18,6 +18,8 @@ const UNIQUE_VIOLATION = "23505";
 
 type Row = {
   id: string;
+  // Owner of the row (ADR-12); never sent to the client.
+  user_id: string;
   country_id: string;
   city_id: string;
   service_id: string;
@@ -86,17 +88,20 @@ function toSavedSupplier(row: Row): SavedSupplier {
   };
 }
 
-export async function listSaved(): Promise<SavedSupplier[]> {
-  const { data, error } = await db().from(TABLE).select("*").order("saved_at", { ascending: false });
+// Every query on saved_suppliers is limited to the signed-in user's rows (PRD FR6.3, ARCHITECTURE 2.9).
+function ownRows(userId: string) {
+  return db().from(TABLE).select("*").eq("user_id", userId);
+}
+
+export async function listSaved(userId: string): Promise<SavedSupplier[]> {
+  const { data, error } = await ownRows(userId).order("saved_at", { ascending: false });
   if (error) fail("list", error);
   return (data as Row[]).map(toSavedSupplier);
 }
 
 // Saved suppliers of one city and service, newest first (saved list export).
-export async function listSavedFor(cityId: string, serviceId: string): Promise<SavedSupplier[]> {
-  const { data, error } = await db()
-    .from(TABLE)
-    .select("*")
+export async function listSavedFor(userId: string, cityId: string, serviceId: string): Promise<SavedSupplier[]> {
+  const { data, error } = await ownRows(userId)
     .eq("city_id", cityId)
     .eq("service_id", serviceId)
     .order("saved_at", { ascending: false });
@@ -105,8 +110,13 @@ export async function listSavedFor(cityId: string, serviceId: string): Promise<S
 }
 
 // Existing row for the same supplier: same city and service, and the same name key or website domain.
-async function findExisting(search: SearchRequest, key: string, domain: string | null): Promise<Row | null> {
-  const base = () => db().from(TABLE).select("*").eq("city_id", search.cityId).eq("service_id", search.serviceId);
+async function findExisting(
+  userId: string,
+  search: SearchRequest,
+  key: string,
+  domain: string | null,
+): Promise<Row | null> {
+  const base = () => ownRows(userId).eq("city_id", search.cityId).eq("service_id", search.serviceId);
   const byName = await base().eq("name_key", key).maybeSingle();
   if (byName.error) fail("find", byName.error);
   if (byName.data || !domain) return byName.data as Row | null;
@@ -117,12 +127,13 @@ async function findExisting(search: SearchRequest, key: string, domain: string |
 
 export type InsertResult = { conflict: boolean; saved: SavedSupplier };
 
-export async function insertSaved(search: SearchRequest, supplier: Supplier): Promise<InsertResult> {
+export async function insertSaved(userId: string, search: SearchRequest, supplier: Supplier): Promise<InsertResult> {
   const key = nameKey(supplier.name);
   const domain = websiteDomain(supplier.website);
   const { data, error } = await db()
     .from(TABLE)
     .insert({
+      user_id: userId,
       country_id: search.countryId,
       city_id: search.cityId,
       service_id: search.serviceId,
@@ -149,32 +160,51 @@ export async function insertSaved(search: SearchRequest, supplier: Supplier): Pr
   if (!error) return { conflict: false, saved: toSavedSupplier(data as Row) };
   if (error.code !== UNIQUE_VIOLATION) fail("insert", error);
 
-  const existing = await findExisting(search, key, domain);
+  const existing = await findExisting(userId, search, key, domain);
   if (!existing) fail("insert", error);
   return { conflict: true, saved: toSavedSupplier(existing) };
 }
 
-// Returns null when the supplier no longer exists.
-export async function updateSaved(id: string, patch: UpdateSavedSupplierRequest): Promise<SavedSupplier | null> {
-  const { data, error } = await db().from(TABLE).update(patch).eq("id", id).select("*").maybeSingle();
+// Returns null when the supplier does not exist or belongs to another user.
+export async function updateSaved(
+  userId: string,
+  id: string,
+  patch: UpdateSavedSupplierRequest,
+): Promise<SavedSupplier | null> {
+  const { data, error } = await db()
+    .from(TABLE)
+    .update(patch)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select("*")
+    .maybeSingle();
   if (error) fail("update", error);
   return data ? toSavedSupplier(data as Row) : null;
 }
 
-// Returns false when the supplier no longer exists.
-export async function deleteSaved(id: string): Promise<boolean> {
-  const { data, error } = await db().from(TABLE).delete().eq("id", id).select("id");
+// Returns false when the supplier does not exist or belongs to another user.
+export async function deleteSaved(userId: string, id: string): Promise<boolean> {
+  const { data, error } = await db().from(TABLE).delete().eq("id", id).eq("user_id", userId).select("id");
   if (error) fail("delete", error);
   return data.length > 0;
 }
 
-// Saved row id for each supplier (same order), or null when it is not saved (PRD FR7.2).
-export async function findSavedIds(search: SearchRequest, suppliers: Supplier[]): Promise<(string | null)[]> {
+// Saved row id for each supplier (same order), or null when this user has not saved it (PRD FR7.2).
+export async function findSavedIds(
+  userId: string,
+  search: SearchRequest,
+  suppliers: Supplier[],
+): Promise<(string | null)[]> {
   if (suppliers.length === 0) return [];
   const keys = suppliers.map((s) => nameKey(s.name));
   const domains = suppliers.map((s) => websiteDomain(s.website));
   const base = () =>
-    db().from(TABLE).select("id, name_key, website_domain").eq("city_id", search.cityId).eq("service_id", search.serviceId);
+    db()
+      .from(TABLE)
+      .select("id, name_key, website_domain")
+      .eq("user_id", userId)
+      .eq("city_id", search.cityId)
+      .eq("service_id", search.serviceId);
 
   const nonNullDomains = domains.filter((d): d is string => d !== null);
   const [byName, byDomain] = await Promise.all([

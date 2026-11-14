@@ -131,6 +131,7 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
   page.tsx                      מסך "Поиск": טופס חיפוש + תוצאות
   /saved/page.tsx               מסך "Сохранённые поставщики"
   /login/page.tsx               מסך ההתחברות
+  /privacy/page.tsx             דף מדיניות הפרטיות (ציבורי, PRD FR6.6)
   /auth/login/route.ts          התחלת ההתחברות עם Google (הפניה ל-Google)
   /auth/callback/route.ts       חזרה מ-Google: יצירת ה-Session והפניה לכתובת המקורית
   /auth/logout/route.ts         יציאה (POST)
@@ -171,10 +172,10 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 ### 2.3 מבנה ה-Frontend
 
 **כללי:**
-- **שני מסכים:** "Поиск" (`/`), שכולל את טופס החיפוש ואת התוצאות, ו-"Сохранённые поставщики" (`/saved`). בנוסף, מסך ההתחברות (`/login`).
-- **כותרת קבועה בכל מסך:** שם המוצר, ניווט עם שני פריטים (Поиск / Сохранённые поставщики, כשהפריט הפעיל מסומן), בורר שפות RU / EN / UK, וכתובת המייל של המשתמש עם כפתור «Выйти». במסך ההתחברות מוצגים רק שם המוצר ובורר השפות.
+- **שני מסכים:** "Поиск" (`/`), שכולל את טופס החיפוש ואת התוצאות, ו-"Сохранённые поставщики" (`/saved`). בנוסף, מסך ההתחברות (`/login`) ודף מדיניות הפרטיות (`/privacy`). אלה שני הדפים היחידים שפתוחים בלי התחברות.
+- **כותרת קבועה בכל מסך:** שם המוצר, ניווט עם שני פריטים (Поиск / Сохранённые поставщики, כשהפריט הפעיל מסומן), בורר שפות RU / EN / UK, וכתובת המייל של המשתמש עם כפתור «Выйти». במסך ההתחברות ובדף מדיניות הפרטיות מוצגים רק שם המוצר ובורר השפות.
 - **התחברות (ADR-12):**
-  - `proxy.ts` מחדש את עוגיית ה-Session בכל בקשה. משתמש לא מחובר שפותח דף מופנה ל-`/login?next=<הכתובת המקורית>`.
+  - `proxy.ts` מחדש את עוגיית ה-Session בכל בקשה. משתמש לא מחובר שפותח דף מופנה ל-`/login?next=<הכתובת המקורית>`. `/login`, `/privacy`, `/auth/*`, ה-Manifest והאייקונים לא מופנים.
   - כפתור «Войти через Google» שולח את הדפדפן ל-`/auth/login`, שמפנה ל-Google דרך Supabase Auth. Google מחזיר ל-`/auth/callback`, שיוצר את ה-Session ומפנה לכתובת שב-`next` (רק כתובת פנימית של האפליקציה).
   - אם ההתחברות נכשלה או בוטלה, `/auth/callback` מפנה ל-`/login?error=1`, ומוצגת הודעת השגיאה.
   - «Выйти» שולח `POST /auth/logout`, שמוחק את ה-Session. לפני כן הלקוח מוחק את זיכרון החיפוש שב-`sessionStorage`.
@@ -553,7 +554,7 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 | **API Keys** | יוצרים Secret Key ייעודי לאפליקציה, ומעתיקים אותו ל-`SUPABASE_SECRET_KEY` ב-Vercel, בהיקף המתאים |
 | **סיסמת ה-Database ומחרוזת החיבור** | מעתיקים את מחרוזת ה-Session Pooler ל-`SUPABASE_DB_URL` ב-Vercel |
 | **Authentication** | מפעילים את הספק **Google** עם ה-Client ID וה-Client Secret מ-Google Cloud. משאירים את "Allow new users to sign up" פעיל (משתמש נוצר בהתחברות הראשונה), ומכבים את הספק Email. ב-URL Configuration מגדירים את ה-Site URL ואת ה-Redirect URLs: ב-Development `http://localhost:3000/auth/callback`, וב-Production `https://suppliers-umber-phi.vercel.app/auth/callback` |
-| **Google Cloud** (פעם אחת, לשני הפרויקטים) | פרויקט ב-Google Cloud עם OAuth consent screen מסוג External, עם ההרשאות הבסיסיות בלבד (`openid`, `email`, `profile`), ובמצב Published. OAuth Client מסוג Web application, שב-Authorized redirect URIs שלו כתובות ה-Callback של Supabase Auth בשני הפרויקטים (`https://<project-ref>.supabase.co/auth/v1/callback`) |
+| **Google Cloud** (פעם אחת, לשני הפרויקטים) | פרויקט ב-Google Cloud עם OAuth consent screen מסוג External, עם ההרשאות הבסיסיות בלבד (`openid`, `email`, `profile`), ובמצב Published. ב-Branding: דף הבית `https://suppliers-umber-phi.vercel.app`, מדיניות הפרטיות `https://suppliers-umber-phi.vercel.app/privacy`, ו-`suppliers-umber-phi.vercel.app` ב-Authorized domains (ADR-13). OAuth Client מסוג Web application, שב-Authorized redirect URIs שלו כתובות ה-Callback של Supabase Auth בשני הפרויקטים (`https://<project-ref>.supabase.co/auth/v1/callback`) |
 | **Storage** | לא בשימוש. לא יוצרים Buckets |
 | **Data API** | משאירים את הסכמה `public` חשופה (supabase-js משתמש בה). ה-RLS בטבלה חוסם גישה בלי Secret Key |
 | **אזור ותוכנית** | האזור נבחר ביצירת הפרויקט. התוכנית (Free) נקבעת ברמת ה-Organization המשותף |
@@ -668,3 +669,8 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 - **הפרדה בין המשתמשים:** עמודת `user_id` ב-`saved_suppliers`, ואילוצי הייחודיות כוללים אותה. ה-RLS נשאר בלי Policies, וההפרדה נאכפת בשרת: כל שאילתה מסוננת לפי המשתמש שאומת עם `auth.getUser()`. כך נשמר העיקרון שכל כללי העסק נאכפים במקום אחד.
 - **נתונים קיימים:** ה-Migration מוחקת את הספקים השמורים הקיימים, כי אין להם בעלים.
 **השלכות:** כל המשתמשים צריכים חשבון Google. המשתמשת מגדירה בעצמה, בהדרכה, את Google Cloud ואת Supabase Auth בשני הפרויקטים. נוסף המשתנה `SUPABASE_PUBLISHABLE_KEY`. נתוני ההדגמה ב-Production יימחקו וצריך ליצור אותם מחדש. כל דפי האפליקציה דינמיים, כי הם תלויים בעוגיית ה-Session. בעתיד אפשר להוסיף Policies של RLS לפי `auth.uid()` כשכבת הגנה נוספת, בלי לשנות את הממשק.
+
+### ADR-13: דף ציבורי של מדיניות פרטיות
+**הקשר:** כדי לפרסם את הגדרת ההתחברות ב-Google Cloud (מצב Published), כך שכל חשבון Google יוכל להתחבר (PRD FR6.2), Google דורש כתובת של דף בית ושל דף מדיניות פרטיות. לאפליקציה לא היה דף כזה. החלופה, להישאר במצב Testing עם רשימת חשבונות מורשים, לא עומדת ב-FR6.2. המשתמשת בחרה להוסיף דף.
+**החלטה:** דף `/privacy` בתוך האפליקציה, בשלוש שפות הממשק, שפתוח גם בלי התחברות ומקושר ממסך ההתחברות. התוכן מבוסס על סעיף 2.9 (מה נשמר, למה, איפה, ואיך מבקשים מחיקה), עם כתובת המייל של המשתמשת ליצירת קשר. דף הבית ב-Google הוא כתובת ה-Production.
+**השלכות:** עוד דף אחד בלי לוגיקה ובלי נתונים. `proxy.ts` מחריג אותו מההפניה ל-`/login`. כל שינוי בנתונים שהאפליקציה שומרת מחייב לעדכן גם את הדף. ייתכן ש-Google יבדוק שהדף נגיש בכתובת ה-Production לפני שיאשר את הפרסום.

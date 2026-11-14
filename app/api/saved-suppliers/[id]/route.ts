@@ -1,6 +1,7 @@
 // PATCH /api/saved-suppliers/[id] – updates status and/or note; DELETE – removes the supplier (ARCHITECTURE 2.7).
 import { z } from "zod";
 import { UpdateSavedSupplierRequestSchema, type ApiError } from "@/shared/schemas";
+import { getUser } from "@/server/auth";
 import { deleteSaved, updateSaved } from "@/server/db";
 
 // Runs on the Node.js runtime (the default; `runtime` config is not allowed with cacheComponents, ADR-5).
@@ -24,7 +25,10 @@ async function validId({ params }: Context): Promise<string | null> {
 }
 
 export async function PATCH(request: Request, context: Context) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
   const id = await validId(context);
+  // Another user's supplier is treated as missing (ARCHITECTURE 2.7).
   if (!id) return error("not_found", 404);
 
   let body: unknown;
@@ -37,7 +41,7 @@ export async function PATCH(request: Request, context: Context) {
   if (!parsed.success) return error("invalid_input", 400);
 
   try {
-    const saved = await updateSaved(id, parsed.data);
+    const saved = await updateSaved(user.id, id, parsed.data);
     if (!saved) return error("not_found", 404);
     return Response.json(saved, { headers: NO_STORE });
   } catch (e) {
@@ -47,11 +51,13 @@ export async function PATCH(request: Request, context: Context) {
 }
 
 export async function DELETE(_request: Request, context: Context) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
   const id = await validId(context);
   if (!id) return error("not_found", 404);
 
   try {
-    const deleted = await deleteSaved(id);
+    const deleted = await deleteSaved(user.id, id);
     if (!deleted) return error("not_found", 404);
     return new Response(null, { status: 204, headers: NO_STORE });
   } catch (e) {

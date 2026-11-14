@@ -1,0 +1,66 @@
+.main {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-8) var(--gutter) 0;
+  min-height: calc(100dvh - 65px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card, 4px);
+  text-align: center;
+}
+
+.title {
+  font-family: var(--font-display);
+}
+
+.hint {
+  color: var(--muted);
+}
+
+/* The error banner and the button span the whole card. */
+.card > :global([role="alert"]) {
+  width: 100%;
+  text-align: start;
+}
+
+.privacy {
+  font-size: var(--text-caption);
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.illustration {
+  width: min(420px, 80%);
+  height: auto;
+  margin-top: auto;
+  padding-top: var(--space-8);
+}
+
+@media (max-width: 767px) {
+  .main {
+    padding-top: var(--space-5);
+    min-height: auto;
+  }
+
+  .card {
+    padding: var(--space-5);
+  }
+
+  .illustration {
+    max-width: 280px;
+    padding-top: var(--space-6);
+  }
+}

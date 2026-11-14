@@ -8,8 +8,8 @@
 
 .inner {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  grid-template-areas: "brand nav lang";
+  grid-template-columns: auto 1fr auto auto;
+  grid-template-areas: "brand nav lang user";
   align-items: center;
   column-gap: var(--space-6);
   max-width: var(--content-max);
@@ -69,13 +69,18 @@
   grid-area: lang;
 }
 
+.user {
+  grid-area: user;
+  min-width: 0;
+}
+
 /* Mobile: two rows — brand + languages, then navigation. */
 @media (max-width: 767px) {
   .inner {
     grid-template-columns: 1fr auto;
     grid-template-areas:
       "brand lang"
-      "nav nav";
+      "nav user";
     height: auto;
     column-gap: var(--space-3);
     row-gap: var(--space-1);

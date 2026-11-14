@@ -66,3 +66,7 @@
   background: var(--ink);
   color: var(--ivory);
 }
+
+.link {
+  text-decoration: none;
+}

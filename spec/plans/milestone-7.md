@@ -159,6 +159,12 @@ create index saved_suppliers_user_saved_at_idx on public.saved_suppliers (user_i
 ### טקסטים – `shared/i18n/{ru,en,uk}.json`
 מטבלת הטקסטים ב-PRD: `login.hint`, `login.button`, `login.error`, `auth.signOut` («Выйти» / «Sign out» / «Вийти»). שם האפליקציה «Supplier Finder» כבר קיים.
 
+## 8א. דף מדיניות הפרטיות – `/privacy` (נבנה ראשון)
+- `app/privacy/page.tsx` + `page.module.css` לפי DESIGN 1.5: H1, תאריך עדכון, פתיחה, סעיפים (נתונים מ-Google, ספקים שמורים, שימוש בנתונים, חיפוש, אחסון ועוגיות, מחיקה, יצירת קשר עם `mailto:`). הטקסט ב-`privacy.*` בקובצי התרגום.
+- `Header`: ב-`/login` וב-`/privacy` רק Wordmark ובורר שפות.
+- `proxy.ts` (סעיף 4) מחריג את `/privacy`. במסך ההתחברות קישור «Политика конфиденциальности» מתחת לכפתור.
+- ב-Google Cloud → Branding: דף הבית `https://suppliers-umber-phi.vercel.app`, מדיניות הפרטיות `.../privacy`, ו-`suppliers-umber-phi.vercel.app` ב-Authorized domains.
+
 ## 9. `DEMO.md`
 - שלב פתיחה חדש: התחברות עם Google בכתובת ה-Production.
 - הסבר קצר: כל משתמש רואה רק את הרשימה שלו; התוצאות השמורות של החיפוש משותפות לכולם.

@@ -16,9 +16,9 @@ function errorMessage(e: unknown): string {
 }
 
 // Fills savedId from the database; a database failure leaves every savedId null and never fails the search.
-async function markSaved(request: SearchRequest, response: SearchResponse): Promise<void> {
+async function markSaved(userId: string, request: SearchRequest, response: SearchResponse): Promise<void> {
   try {
-    const ids = await findSavedIds(request, response.suppliers);
+    const ids = await findSavedIds(userId, request, response.suppliers);
     response.suppliers.forEach((supplier, i) => {
       supplier.savedId = ids[i];
     });
@@ -39,7 +39,8 @@ async function readCache(request: SearchRequest): Promise<SearchResponse | null>
   }
 }
 
-export async function runSearch(request: SearchRequest, cancelSignal: AbortSignal): Promise<SearchResponse> {
+// savedId marks only the suppliers saved by this user (PRD FR7.2); the stored result itself is shared by everyone.
+export async function runSearch(request: SearchRequest, userId: string, cancelSignal: AbortSignal): Promise<SearchResponse> {
   const country = getCountry(request.countryId)!;
   const city = getCity(request.cityId)!;
   const service = getService(request.serviceId)!;
@@ -48,7 +49,7 @@ export async function runSearch(request: SearchRequest, cancelSignal: AbortSigna
   if (!request.refresh) {
     const cached = await readCache(request);
     if (cached) {
-      await markSaved(request, cached);
+      await markSaved(userId, request, cached);
       console.info(
         JSON.stringify({
           event: "search_cached",
@@ -72,7 +73,7 @@ export async function runSearch(request: SearchRequest, cancelSignal: AbortSigna
   } catch (e) {
     console.warn(JSON.stringify({ event: "search_cache_write_failed", message: errorMessage(e) }));
   }
-  await markSaved(request, response);
+  await markSaved(userId, request, response);
 
   console.info(
     JSON.stringify({

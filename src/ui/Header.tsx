@@ -14,7 +14,11 @@ const NAV_ITEMS = [
   { href: "/saved", key: "nav.saved" },
 ] as const;
 
-export function Header() {
+// Public pages show only the wordmark and the language switcher (DESIGN 1.0, 1.5).
+const MINIMAL_HEADER_PATHS = ["/login", "/privacy"];
+
+// userArea: the signed-in user's email and «Выйти», rendered on the server (app/_components/UserArea).
+export function Header({ userArea }: { userArea?: React.ReactNode }) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const { form, search } = useAppState();
@@ -22,6 +26,7 @@ export function Header() {
   // The saved screen opens filtered to the city and service chosen in the search (or of the last search).
   const selection = form.countryId && form.cityId && form.serviceId ? form : search.request;
   const hrefs: Record<string, string> = { "/": "/", "/saved": savedHref(selection) };
+  const minimal = MINIMAL_HEADER_PATHS.includes(pathname);
 
   return (
     <header className={styles.header}>
@@ -30,24 +35,27 @@ export function Header() {
           <BrandMark size={28} />
           <span className={styles.wordmarkText}>Supplier Finder</span>
         </Link>
-        <nav aria-label={t("nav.label")} className={styles.nav}>
-          {NAV_ITEMS.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={hrefs[item.href]}
-                className={styles.navLink}
-                aria-current={active ? "page" : undefined}
-              >
-                {t(item.key)}
-              </Link>
-            );
-          })}
-        </nav>
+        {!minimal && (
+          <nav aria-label={t("nav.label")} className={styles.nav}>
+            {NAV_ITEMS.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={hrefs[item.href]}
+                  className={styles.navLink}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {t(item.key)}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
         <div className={styles.lang}>
           <LanguageSwitcher />
         </div>
+        {!minimal && <div className={styles.user}>{userArea}</div>}
       </div>
     </header>
   );

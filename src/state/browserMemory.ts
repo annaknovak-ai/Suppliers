@@ -51,3 +51,12 @@ export function storeSearch(search: StoredSearch): void {
     // Not remembered; a refresh returns to the empty search form.
   }
 }
+
+// Called before signing out, so the next person in this browser does not see the previous search (PRD edge cases).
+export function clearSearch(): void {
+  try {
+    sessionStorage.removeItem(SEARCH_KEY);
+  } catch {
+    // Nothing was stored.
+  }
+}

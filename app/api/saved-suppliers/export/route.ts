@@ -2,6 +2,7 @@
 import { getCity, getService, LANGS, type Lang } from "@/shared/catalog";
 import { savedExportFileName, XLSX_MIME } from "@/shared/exportFileName";
 import type { ApiError } from "@/shared/schemas";
+import { getUser } from "@/server/auth";
 import { listSavedFor } from "@/server/db";
 import { buildSavedSuppliersWorkbook } from "@/server/excel";
 
@@ -14,6 +15,9 @@ function error(code: string, status: number) {
 }
 
 export async function GET(request: Request) {
+  const user = await getUser();
+  if (!user) return error("unauthorized", 401);
+
   const params = new URL(request.url).searchParams;
   const city = getCity(params.get("city") ?? "");
   const service = getService(params.get("service") ?? "");
@@ -22,7 +26,7 @@ export async function GET(request: Request) {
 
   const search = { countryId: city.countryId, cityId: city.id, serviceId: service.id };
   try {
-    const items = await listSavedFor(city.id, service.id);
+    const items = await listSavedFor(user.id, city.id, service.id);
     // Same rule as the search export: nothing to export is a bad request.
     if (items.length === 0) return error("empty", 400);
     const exportedAt = new Date().toISOString();

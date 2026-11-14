@@ -1,0 +1,24 @@
+.user {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.email {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  color: var(--muted);
+}
+
+/* Mobile: no email; «Выйти» sits at the right end of the navigation row (DESIGN, shared components). */
+@media (max-width: 767px) {
+  .email {
+    display: none;
+  }
+}
