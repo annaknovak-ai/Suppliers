@@ -93,7 +93,9 @@
     "retry": "Try again"
   },
   "results": {
-    "heading": "{{service}} – {{city}}"
+    "heading": "{{service}} – {{city}}",
+    "searchedAt": "Search results from {{date}}",
+    "searchAgain": "Search again"
   },
   "excel": {
     "country": "Country",

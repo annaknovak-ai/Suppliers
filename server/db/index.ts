@@ -1,10 +1,13 @@
-// Supabase access for the saved_suppliers table (ARCHITECTURE 2.4, 2.7). Server only, Secret Key.
+// Supabase access for the saved_suppliers and search_results tables (ARCHITECTURE 2.4, 2.7). Server only, Secret Key.
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { nameKey, websiteDomain } from "@/shared/normalize";
 import {
+  CachedSearchResponseSchema,
   CRITERIA_KEYS,
+  type CachedSearchResponse,
   type SavedSupplier,
+  type SearchResponse,
   type SearchRequest,
   type Supplier,
   type UpdateSavedSupplierRequest,
@@ -185,4 +188,39 @@ export async function findSavedIds(search: SearchRequest, suppliers: Supplier[])
   const idByName = new Map((byName.data as Match[]).map((r) => [r.name_key, r.id]));
   const idByDomain = new Map((byDomain.data as Match[]).map((r) => [r.website_domain, r.id]));
   return suppliers.map((_, i) => idByName.get(keys[i]) ?? (domains[i] ? idByDomain.get(domains[i]) : undefined) ?? null);
+}
+
+// ---- search_results: the latest web search result per city and service (ADR-11) ----
+
+const SEARCH_TABLE = "search_results";
+
+// The stored result of a city and service, or null when there is none or it no longer matches the schema.
+export async function getCachedSearch(cityId: string, serviceId: string): Promise<CachedSearchResponse | null> {
+  const { data, error } = await db()
+    .from(SEARCH_TABLE)
+    .select("response, searched_at")
+    .eq("city_id", cityId)
+    .eq("service_id", serviceId)
+    .maybeSingle();
+  if (error) fail("getCachedSearch", error);
+  if (!data) return null;
+  const parsed = CachedSearchResponseSchema.safeParse({
+    ...(data.response as object),
+    searchedAt: new Date(data.searched_at as string).toISOString(),
+  });
+  if (!parsed.success) {
+    console.warn(JSON.stringify({ event: "search_cache_invalid", cityId, serviceId }));
+    return null;
+  }
+  return parsed.data;
+}
+
+// Replaces the stored result of a city and service; savedId is per user and never stored.
+export async function storeSearch(cityId: string, serviceId: string, response: SearchResponse): Promise<void> {
+  // Parsing drops the unknown savedId key from every supplier.
+  const stored: CachedSearchResponse = CachedSearchResponseSchema.parse(response);
+  const { error } = await db()
+    .from(SEARCH_TABLE)
+    .upsert({ city_id: cityId, service_id: serviceId, response: stored, searched_at: response.searchedAt });
+  if (error) fail("storeSearch", error);
 }

@@ -19,8 +19,11 @@ export type SearchForm = {
 
 export type SearchState = {
   status: "idle" | "loading" | "success" | "error";
-  // The last search that was started; drives the results heading and "retry".
+  // The last search that was started, without the refresh flag; drives the results heading, saving and export.
   request: SearchRequest | null;
+  // True when that search was "Search again": it always searches the web, so the loading state shows at once
+  // and "retry" searches the web again too.
+  refresh: boolean;
   response: SearchResponse | null;
 };
 
@@ -38,7 +41,7 @@ type Action =
   | { type: "setCountry"; countryId: string | null }
   | { type: "setCity"; cityId: string | null }
   | { type: "setService"; serviceId: string | null }
-  | { type: "searchStarted"; request: SearchRequest }
+  | { type: "searchStarted"; request: SearchRequest; refresh: boolean }
   | { type: "searchSucceeded"; response: SearchResponse }
   | { type: "searchFailed" }
   | { type: "supplierSaved"; searchedAt: string; index: number; savedId: string };
@@ -46,7 +49,7 @@ type Action =
 const initialState: State = {
   lang: DEFAULT_LANG,
   form: { countryId: null, cityId: null, serviceId: null },
-  search: { status: "idle", request: null, response: null },
+  search: { status: "idle", request: null, refresh: false, response: null },
   restored: false,
 };
 
@@ -60,7 +63,7 @@ function reducer(state: State, action: Action): State {
         restored: true,
         lang: action.lang ?? state.lang,
         form: action.stored?.form ?? state.form,
-        search: action.stored?.last ? { status: "success", ...action.stored.last } : state.search,
+        search: action.stored?.last ? { status: "success", refresh: false, ...action.stored.last } : state.search,
       };
     case "setCountry":
       // Changing the country always resets the city (PRD 3ג).
@@ -70,7 +73,10 @@ function reducer(state: State, action: Action): State {
     case "setService":
       return { ...state, form: { ...state.form, serviceId: action.serviceId } };
     case "searchStarted":
-      return { ...state, search: { status: "loading", request: action.request, response: null } };
+      return {
+        ...state,
+        search: { status: "loading", request: action.request, refresh: action.refresh, response: null },
+      };
     case "searchSucceeded":
       return { ...state, search: { ...state.search, status: "success", response: action.response } };
     case "searchFailed":
@@ -92,6 +98,8 @@ type AppStateContextValue = State & {
   setService: (serviceId: string | null) => void;
   runSearch: (request: SearchRequest) => void;
   retrySearch: () => void;
+  // "Search again": a new web search for the shown city and service, even when a saved result is valid.
+  refreshSearch: () => void;
   // Saves a supplier from the shown results and marks it as saved; throws when saving fails.
   saveResultSupplier: (index: number) => Promise<void>;
 };
@@ -129,22 +137,26 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   // A new search aborts the previous one; only the latest request may update the state.
   const controllerRef = useRef<AbortController | null>(null);
-  const runSearch = useCallback(async (request: SearchRequest) => {
+  const runSearch = useCallback(async (request: SearchRequest, refresh = false) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    dispatch({ type: "searchStarted", request });
+    const { countryId, cityId, serviceId } = request;
+    dispatch({ type: "searchStarted", request: { countryId, cityId, serviceId }, refresh });
     try {
-      const response = await searchSuppliers(request, controller.signal);
+      const response = await searchSuppliers({ countryId, cityId, serviceId, refresh }, controller.signal);
       if (controllerRef.current === controller) dispatch({ type: "searchSucceeded", response });
     } catch {
       if (controllerRef.current === controller) dispatch({ type: "searchFailed" });
     }
   }, []);
 
-  const lastRequest = state.search.request;
+  const { request: lastRequest, refresh: lastWasRefresh } = state.search;
   const retrySearch = useCallback(() => {
-    if (lastRequest) runSearch(lastRequest);
+    if (lastRequest) runSearch(lastRequest, lastWasRefresh);
+  }, [lastRequest, lastWasRefresh, runSearch]);
+  const refreshSearch = useCallback(() => {
+    if (lastRequest) runSearch(lastRequest, true);
   }, [lastRequest, runSearch]);
 
   const { request: searchRequest, response: searchResponse } = state.search;
@@ -164,11 +176,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       setCountry: (countryId) => dispatch({ type: "setCountry", countryId }),
       setCity: (cityId) => dispatch({ type: "setCity", cityId }),
       setService: (serviceId) => dispatch({ type: "setService", serviceId }),
-      runSearch,
+      runSearch: (request) => runSearch(request),
       retrySearch,
+      refreshSearch,
       saveResultSupplier,
     }),
-    [state, setLang, runSearch, retrySearch, saveResultSupplier],
+    [state, setLang, runSearch, retrySearch, refreshSearch, saveResultSupplier],
   );
 
   return (

@@ -8,6 +8,8 @@ export const SearchRequestSchema = z.object({
   countryId: text(10),
   cityId: text(40),
   serviceId: text(40),
+  // Web search even when a valid saved result exists (PRD FR2.8).
+  refresh: z.boolean().optional(),
 });
 export type SearchRequest = z.infer<typeof SearchRequestSchema>;
 
@@ -67,6 +69,12 @@ export const SearchResponseSchema = z.object({
   searchedAt: z.iso.datetime(),
 });
 export type SearchResponse = z.infer<typeof SearchResponseSchema>;
+
+// A search result as stored in search_results: the same response without savedId (ARCHITECTURE 2.5).
+export const CachedSearchResponseSchema = SearchResponseSchema.extend({
+  suppliers: z.array(SupplierSchema.omit({ savedId: true })).max(5),
+});
+export type CachedSearchResponse = z.infer<typeof CachedSearchResponseSchema>;
 
 export const ExportRequestSchema = z.object({
   search: SearchRequestSchema,

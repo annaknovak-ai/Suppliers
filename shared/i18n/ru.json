@@ -93,7 +93,9 @@
     "retry": "Повторить"
   },
   "results": {
-    "heading": "{{service}} – {{city}}"
+    "heading": "{{service}} – {{city}}",
+    "searchedAt": "Результаты поиска от {{date}}",
+    "searchAgain": "Искать заново"
   },
   "excel": {
     "country": "Страна",

@@ -16,7 +16,7 @@
 | התקנה על מסך הבית (PWA) | **Web App Manifest מובנה ב-Next.js** (`app/manifest.ts`) | התקנת האתר על מסך הבית ב-Android ופתיחה במסך מלא, כמו אפליקציה |
 | ריבוי שפות (i18n) | **i18next + react-i18next** | ניהול טקסטי הממשק ב-ru/en/uk והחלפת שפה בזמן ריצה |
 | ולידציה | **Zod** | בדיקת קלט ופלט ב-API ובמבנה התשובה מה-AI, עם סכמות משותפות ללקוח ולשרת |
-| Database | **Supabase (PostgreSQL)** | שמירת הספקים השמורים, הסטטוסים וההערות |
+| Database | **Supabase (PostgreSQL)** | שמירת הספקים השמורים, הסטטוסים וההערות של כל משתמש, ותוצאות החיפוש השמורות |
 | גישה ל-Database | **@supabase/supabase-js** (בצד השרת בלבד, עם Secret Key) | קריאה וכתיבה של ספקים שמורים מתוך Route Handlers |
 | Database Migrations | **Supabase CLI** (חבילת npm `supabase`, ללא Docker) | ניהול שינויים במבנה מסד הנתונים כקובצי SQL ב-Repository, והרצתם אוטומטית בכל Build |
 | מנוע חיפוש ואימות | **OpenAI API (Responses API) – מודל `gpt-5.5` עם הכלי המובנה `web_search`** | חיפוש ברשת בזמן אמת, חילוץ פרטי ספקים, בדיקת תנאי סף והחזרת מקורות (Citations) |
@@ -25,7 +25,7 @@
 | Hosting | **Vercel (תוכנית Pro)** | אירוח האתר וה-Functions, פריסה אוטומטית מ-GitHub בכל Push ל-`main` |
 | הגנה מפני שימוש לרעה | **Vercel WAF Rate Limiting** | הגבלת מספר החיפושים והשינויים לכל IP |
 | ניהול קוד | **GitHub** | Repository אחד לכל המערכת |
-| Authentication | **אין** | ה-PRD קובע שהגישה פתוחה לכל מי שיש לו לינק |
+| Authentication | **Supabase Auth עם Google** (ספריית `@supabase/ssr`, בצד השרת בלבד) | התחברות עם חשבון Google, ושמירת ה-Session בעוגיות (ADR-12) |
 
 ### 1.2 נימוקים להחלטות המרכזיות
 
@@ -43,7 +43,7 @@ Next.js נבחר כי הוא הפתרון המקובל ביותר בתעשייה
 - **Neon (Vercel Postgres):** PostgreSQL Serverless, בלי Dashboard לניהול נתונים ברמה של Supabase.
 - **MongoDB Atlas (NoSQL):** אין הצדקה ל-NoSQL. המידע מובנה, וטבלה אחת עם אילוצי ייחודיות מתאימה לו בדיוק.
 
-Supabase נבחר כי הוא ברירת המחדל המועדפת לפרויקט מסוג זה, עונה על כל הצרכים ופשוט לתפעול גם בלי ידע בתכנות. המערכת משתמשת רק ב-Database של Supabase, ולא ב-Auth, ב-Storage או ב-Edge Functions, כי ה-PRD לא דורש אותם.
+Supabase נבחר כי הוא ברירת המחדל המועדפת לפרויקט מסוג זה, עונה על כל הצרכים ופשוט לתפעול גם בלי ידע בתכנות. המערכת משתמשת ב-Database וב-Auth של Supabase (התחברות עם Google, ADR-12), ולא ב-Storage או ב-Edge Functions, כי ה-PRD לא דורש אותם.
 
 **כל הגישה ל-Database עוברת דרך השרת.** הדפדפן לא פונה ישירות ל-Supabase. ה-Route Handlers משתמשים ב-Secret Key, ומסד הנתונים חסום לכל גישה אחרת באמצעות RLS (ראו 2.9). כך כל כללי העסק, למשל מניעת כפילויות ובדיקת הסטטוסים המותרים, נאכפים במקום אחד, ואין מפתח של Supabase בקוד הלקוח.
 
@@ -64,9 +64,11 @@ OpenAI נבחר לפי החלטת המשתמשת (ADR-6). כמו בבחירה ה
 | נושא | פירוט | מענה |
 |---|---|---|
 | **דיוק המידע** | תנאי הסף נבדקים לפי מידע פתוח ברשת. לא תמיד יש מידע זמין, והמידע עלול להיות לא מדויק או לא עדכני | הסטטוס "לא אומת" (Не подтверждено), קישור למקור לכל תנאי, ובדיקה בשרת שכל URL שמוצג אכן הופיע בתוצאות החיפוש (סעיף 2.6) |
-| **זמן תגובה** | חיפוש ואימות של כמה ספקים כרוכים בכמה חיפושים ברשת. זמן התגובה הצפוי הוא עשרות שניות, ולא שניות בודדות | רמת חשיבה (`reasoning.effort`) נמוכה, הגבלת `max_tool_calls` וחיווי טעינה. אלה פרמטרים בהגדרות שאפשר לכוונן (סעיף 2.10) |
+| **זמן תגובה** | חיפוש ואימות של כמה ספקים כרוכים בכמה חיפושים ברשת. זמן התגובה הצפוי הוא עשרות שניות, ולא שניות בודדות | תוצאות נשמרות ל-30 ימים, וחיפוש חוזר של אותה עיר ואותו תחום נטען מה-Database תוך שנייה (ADR-11). בחיפוש ברשת: רמת חשיבה (`reasoning.effort`) נמוכה, הגבלת `max_tool_calls` וחיווי טעינה עם שלבים. אלה פרמטרים בהגדרות שאפשר לכוונן (סעיף 2.10) |
 | **עלות לכל חיפוש** | הערכה גסה במודל `gpt-5.5` (5$ ל-מיליון Tokens קלט, 30$ ל-מיליון Tokens פלט, 0.01$ לכל קריאה לכלי החיפוש): כ-0.3$ עד 0.6$ לחיפוש, לפי כמות תוכן החיפוש שנקראת. ההערכה תיבדק על חיפושים אמיתיים ב-M2 | הגבלת `max_tool_calls`, Rate Limiting ותקרת הוצאה חודשית ב-Project של OpenAI. המודל מוגדר במשתנה סביבה. מעבר למודל זול יותר יוזיל משמעותית אך עלול לפגוע בדיוק. זו החלטה עסקית שאפשר לקבל אחרי בדיקה על חיפושים אמיתיים |
-| **לינק פתוח ללא התחברות** | כל מי שיש לו את הלינק יכול להפעיל חיפושים בתשלום, וגם לערוך ולמחוק ספקים שמורים (PRD FR6.2) | Rate Limiting לכל IP ב-Vercel WAF, תקרת הוצאה ב-OpenAI וחלון אישור לפני מחיקה. בתוכנית החינמית של Supabase אין גיבויים יומיים (ADR-8) |
+| **כל חשבון Google יכול להתחבר** | כל מי שיש לו חשבון Google יכול להתחבר ולהפעיל חיפושים בתשלום (PRD FR6.2). הספקים השמורים של כל משתמש מוגנים, ורק הוא יכול לערוך ולמחוק אותם | Rate Limiting לכל IP ב-Vercel WAF, תקרת הוצאה ב-OpenAI, ותוצאות שמורות שמייתרות חלק גדול מהחיפושים ברשת. חלון אישור לפני מחיקה. בתוכנית החינמית של Supabase אין גיבויים יומיים (ADR-8) |
+| **הגדרת ההתחברות ב-Google** | כל עוד הגדרת ההתחברות ב-Google Cloud במצב בדיקה (Testing), רק חשבונות שנוספו לרשימה יכולים להתחבר | מפרסמים את ההגדרה (Publish app). האפליקציה מבקשת רק את ההרשאות הבסיסיות (מזהה, מייל ושם), ולכן לא צפוי תהליך אימות של Google. אם Google ידרוש אימות, ההתחברות תמשיך לעבוד, עם מסך אזהרה למשתמשים עד שהאימות יושלם |
+| **התחברות מ-PWA מותקן** | ההתחברות עם Google עוברת דרך דפי Google וחוזרת לאפליקציה. כשהאתר מותקן ונפתח במסך מלא ב-Android, המעבר עלול להתנהג אחרת מאשר בדפדפן | יש לבדוק התחברות מהאפליקציה המותקנת ב-Android בכתובת ה-Production |
 | **השהיית פרויקט Supabase** | בתוכנית החינמית של Supabase, פרויקט שלא נעשה בו שימוש במשך 7 ימים מושהה, והאתר יפסיק לעבוד עד שמשחזרים אותו | שני הפרויקטים באותו Organization בתוכנית Free, כי זה פרויקט לימודי (ADR-8). אם פרויקט הושהה, לוחצים "Restore" ב-Dashboard של Supabase וממתינים כמה דקות. לפני הדגמה מוודאים שפרויקט ה-Production פעיל (סעיף 2.10) |
 | **iPhone ו-iPad לא נתמכים** | עובדים עם iPhone יכולים לפתוח את הלינק, אבל האתר לא מותאם ולא נבדק ב-iOS, ואין בו הנחיית התקנה | החלטה מכוונת (ADR-4). אם יידרש בעתיד, אפשר להוסיף תמיכה בלי שינוי מבני |
 | **הורדת קובץ בנייד** | כשהאתר מותקן ונפתח במסך מלא, ההורדה עלולה לעבוד אחרת מאשר בדפדפן רגיל | ההורדה מתבצעת עם קובץ מצורף רגיל מהשרת. כשהדפדפן תומך, נפתח תפריט השיתוף של מערכת ההפעלה (Web Share API עם קובץ). יש לבדוק את ההורדה בפועל ב-Android לפני העלייה לאוויר |
@@ -83,35 +85,41 @@ OpenAI נבחר לפי החלטת המשתמשת (ADR-6). כמו בבחירה ה
 │ דפדפן: מחשב / טאבלט / נייד (או PWA מותקן)     │
 │ Next.js client (React)                        │
 └──────────────────────┬───────────────────────┘
-                       │ HTTPS (JSON / xlsx)
+                       │ HTTPS (JSON / xlsx) + עוגיית Session
                        ▼
 ┌──────────────────────────────────────────────┐
 │ Vercel                                        │
 │  • WAF Rate Limiting                          │
-│  • דפי Next.js + manifest                     │
+│  • proxy.ts: בדיקת התחברות וחידוש Session    │
+│  • דפי Next.js + manifest, /login             │
+│  • /auth/*                (התחברות ויציאה)    │
 │  • /api/search            (Route Handler)     │
 │  • /api/export            (Route Handler)     │
 │  • /api/saved-suppliers   (Route Handlers)    │
 └──────────┬──────────────────────────┬────────┘
-           │ HTTPS + API key           │ HTTPS + Secret Key
+           │ HTTPS + API key           │ HTTPS + Secret / Publishable Key
            ▼                           ▼
 ┌──────────────────────────┐  ┌──────────────────────────┐
-│ OpenAI API               │  │ Supabase (PostgreSQL)    │
-│ Responses + web_search   │  │ טבלת saved_suppliers     │
-└──────────────────────────┘  └──────────────────────────┘
+│ OpenAI API               │  │ Supabase                 │
+│ Responses + web_search   │  │ Auth (ספק: Google)       │
+└──────────────────────────┘  │ טבלאות saved_suppliers,  │
+                              │ search_results           │
+                              └──────────────────────────┘
 ```
 
 | רכיב | אחריות |
 |---|---|
-| **Client** (רכיבי React בצד הלקוח) | הצגת הממשק, ניווט בין המסכים, בחירה ברשימות הנפתחות, ניהול שפה, הצגת התוצאות, שמירת ספקים, עדכון ומחיקה של ספקים שמורים, הפעלת ייצוא |
-| **Search Route Handler** (`/api/search`) | ולידציה של הקלט, בניית הבקשה למנוע ה-AI (OpenAI), עיבוד התשובה, אכיפת כללי העסק (בחירת 5, סימון ספקים חלקיים, הסרת כפילויות, אימות מקורות), וסימון של ספקים שכבר שמורים |
+| **Client** (רכיבי React בצד הלקוח) | הצגת הממשק, מסך ההתחברות, ניווט בין המסכים, בחירה ברשימות הנפתחות, ניהול שפה, הצגת התוצאות, שמירת ספקים, עדכון ומחיקה של ספקים שמורים, הפעלת ייצוא |
+| **Proxy** (`proxy.ts`) | חידוש עוגיית ה-Session בכל בקשה, והפניה של משתמש לא מחובר מכל דף ל-`/login` |
+| **Auth Route Handlers** (`/auth/*`) | התחלת ההתחברות עם Google, קבלת המשתמש בחזרה מ-Google ויצירת ה-Session, ויציאה |
+| **Search Route Handler** (`/api/search`) | בדיקת התחברות, ולידציה של הקלט, החזרת תוצאה שמורה בתוקף או חיפוש ברשת: בניית הבקשה למנוע ה-AI (OpenAI), עיבוד התשובה, אכיפת כללי העסק (בחירת 5, סימון ספקים חלקיים, הסרת כפילויות, אימות מקורות) ושמירת התוצאה. בסוף, סימון הספקים שכבר שמורים אצל המשתמש |
 | **Export Route Handler** (`/api/export`) | יצירת קובץ Excel מהתוצאות שהלקוח שולח |
-| **Saved Suppliers Route Handlers** (`/api/saved-suppliers`) | יצירה, קריאה, עדכון ומחיקה של ספקים שמורים ב-Database, מניעת כפילויות, וייצוא ל-Excel של הספקים השמורים של עיר ותחום אחד |
+| **Saved Suppliers Route Handlers** (`/api/saved-suppliers`) | יצירה, קריאה, עדכון ומחיקה של הספקים השמורים של המשתמש המחובר, מניעת כפילויות, וייצוא ל-Excel של הספקים השמורים שלו בעיר ובתחום אחד |
 | **Shared** (קוד משותף) | קטלוגים קבועים, טיפוסים, סכמות Zod ותרגומים, שמשמשים את הלקוח ואת השרת |
 | **OpenAI API** | חיפוש ברשת, חילוץ נתונים ובדיקת תנאי הסף, עם מקורות |
-| **Supabase** | אחסון קבוע של הספקים השמורים, הסטטוסים וההערות |
+| **Supabase** | התחברות עם Google (Auth) ורשימת המשתמשים. אחסון קבוע של הספקים השמורים, הסטטוסים וההערות של כל משתמש, ושל התוצאה האחרונה לכל עיר ותחום |
 
-**מה נשמר ומה לא:** ה-Database שומר רק ספקים שמורים. תוצאות החיפוש לא נשמרות בו, ונוצרות מחדש בכל חיפוש (PRD, סעיף 5ב). הדפדפן זוכר את החיפוש האחרון עד סגירת הלשונית, כדי שריענון לא ימחק אותו (ADR-10). רשימות המדינות, הערים ותחומי השירות קבועות ב-PRD ואין אפשרות לערוך אותן, ולכן הן נשמרות בקוד.
+**מה נשמר ומה לא:** ה-Database שומר את הספקים השמורים של כל משתמש, ואת התוצאה האחרונה של כל צירוף עיר ותחום, שמשמשת חיפוש חוזר במשך 30 ימים (ADR-11). רשימות המשתמשים וה-Sessions נשמרות ב-Supabase Auth. הדפדפן זוכר את החיפוש האחרון עד סגירת הלשונית או עד היציאה מהחשבון, כדי שריענון לא ימחק אותו (ADR-10). רשימות המדינות, הערים ותחומי השירות קבועות ב-PRD ואין אפשרות לערוך אותן, ולכן הן נשמרות בקוד.
 
 ### 2.2 מבנה ה-Repository ושכבות לוגיות
 
@@ -122,6 +130,10 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
   layout.tsx                    מבנה הדף, כותרת עם ניווט ובורר שפות, metadata
   page.tsx                      מסך "Поиск": טופס חיפוש + תוצאות
   /saved/page.tsx               מסך "Сохранённые поставщики"
+  /login/page.tsx               מסך ההתחברות
+  /auth/login/route.ts          התחלת ההתחברות עם Google (הפניה ל-Google)
+  /auth/callback/route.ts       חזרה מ-Google: יצירת ה-Session והפניה לכתובת המקורית
+  /auth/logout/route.ts         יציאה (POST)
   manifest.ts                   Web App Manifest
   /api/search/route.ts          Route Handler לחיפוש
   /api/export/route.ts          Route Handler לייצוא
@@ -139,8 +151,10 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 /server                         לוגיקת שרת בלבד (מסומנת ב-`server-only`):
                                   ai     – בניית ה-Prompt והקריאה ל-OpenAI API
                                   rules  – כללי העסק של החיפוש
-                                  db     – Supabase client ופעולות על טבלת saved_suppliers
+                                  auth   – Supabase Auth client (עוגיות) וזיהוי המשתמש המחובר
+                                  db     – Supabase client ופעולות על הטבלאות saved_suppliers ו-search_results
                                   excel  – יצירת קובץ ה-xlsx
+/proxy.ts                       חידוש ה-Session והפניה ל-/login (ה-Middleware של Next.js)
 /supabase
   config.toml                   הגדרות Supabase CLI
   /migrations                   קובצי SQL ממוספרים לפי זמן (YYYYMMDDHHMMSS_name.sql)
@@ -157,8 +171,15 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 ### 2.3 מבנה ה-Frontend
 
 **כללי:**
-- **שני מסכים:** "Поиск" (`/`), שכולל את טופס החיפוש ואת התוצאות, ו-"Сохранённые поставщики" (`/saved`).
-- **כותרת קבועה בכל מסך:** שם המוצר, ניווט עם שני פריטים (Поиск / Сохранённые поставщики, כשהפריט הפעיל מסומן) ובורר שפות RU / EN / UK.
+- **שני מסכים:** "Поиск" (`/`), שכולל את טופס החיפוש ואת התוצאות, ו-"Сохранённые поставщики" (`/saved`). בנוסף, מסך ההתחברות (`/login`).
+- **כותרת קבועה בכל מסך:** שם המוצר, ניווט עם שני פריטים (Поиск / Сохранённые поставщики, כשהפריט הפעיל מסומן), בורר שפות RU / EN / UK, וכתובת המייל של המשתמש עם כפתור «Выйти». במסך ההתחברות מוצגים רק שם המוצר ובורר השפות.
+- **התחברות (ADR-12):**
+  - `proxy.ts` מחדש את עוגיית ה-Session בכל בקשה. משתמש לא מחובר שפותח דף מופנה ל-`/login?next=<הכתובת המקורית>`.
+  - כפתור «Войти через Google» שולח את הדפדפן ל-`/auth/login`, שמפנה ל-Google דרך Supabase Auth. Google מחזיר ל-`/auth/callback`, שיוצר את ה-Session ומפנה לכתובת שב-`next` (רק כתובת פנימית של האפליקציה).
+  - אם ההתחברות נכשלה או בוטלה, `/auth/callback` מפנה ל-`/login?error=1`, ומוצגת הודעת השגיאה.
+  - «Выйти» שולח `POST /auth/logout`, שמוחק את ה-Session. לפני כן הלקוח מוחק את זיכרון החיפוש שב-`sessionStorage`.
+  - תשובת `401` מכל API מעבירה את הדפדפן ל-`/login`, עם הכתובת הנוכחית ב-`next`.
+  - כל העבודה מול Supabase Auth נעשית בשרת. אין מפתח Supabase בקוד הלקוח.
 - **רספונסיביות:** CSS Modules עם Media Queries. במסך רחב הכרטיסים מסודרים ברשת, ובמסך צר כל רכיב תופס עמודה אחת. כפתורים ושדות בגודל שנוח ללחיצה באצבע.
 - **ניהול מצב:** `useReducer` ו-React Context, בלי ספריית State חיצונית. השפה ותוצאות החיפוש האחרון נשמרות ב-Context ברמת ה-Layout, ולכן מעבר בין המסכים לא מוחק אותן. הבחירות בטופס והחיפוש האחרון שהסתיים נשמרים גם ב-`sessionStorage`, ולכן ריענון לא מוחק אותם (ADR-10).
 - **שפה:** i18next מאותחל עם `lng: "ru"` ו-`fallbackLng: "ru"`. החלפת שפה משנה רק את טקסטי הממשק ולא מפעילה חיפוש חדש (PRD, Flow 3). מאפיין `lang` של `<html>` מתעדכן לפי השפה הפעילה. השפה שנבחרה נשמרת ב-`localStorage` ומוחלת מיד אחרי טעינת הדף (ADR-10).
@@ -167,11 +188,12 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 **מסך Поиск:**
 - `<select>` רגיל של HTML לכל שדה, שנפתח בבורר ה-Native של כל מכשיר. שדה העיר מושבת עד שבוחרים מדינה ומתאפס כשמחליפים מדינה. כפתור החיפוש פעיל רק כששלושת השדות מלאים.
 - כל בקשת חיפוש מקבלת `AbortController`. בקשה חדשה מבטלת את הקודמת, ומוצגות רק תוצאות החיפוש האחרון שהופעל.
+- מעל רשימת התוצאות מוצג «Результаты поиска от ДД.ММ.ГГГГ» לפי `searchedAt`, וכפתור «Искать заново» ששולח את אותו חיפוש עם `refresh: true` (PRD FR3.10). בזמן החיפוש מחדש מוצג מצב הטעינה הרגיל.
 - בזמן החיפוש מוצגים שלושה שלבים שמתחלפים לפי זמן קבוע, אחרי 15 ואחרי 35 שניות. החיפוש הוא קריאה אחת ל-OpenAI בלי דיווח ביניים, ולכן השלבים מתארים את המהלך הרגיל של החיפוש, ולא אירועים בזמן אמת.
 - בכל כרטיס יש כפתור Сохранить. אם השרת סימן את הספק כשמור (`savedId` אינו `null`), מוצג במקומו Сохранено, והכפתור לא לחיץ. אחרי שמירה מוצלחת הכפתור מתחלף ל-Сохранено מיד.
 
 **מסך Сохранённые поставщики:**
-- בכל כניסה למסך, וגם אחרי ריענון, הרשימה נטענת מהשרת (`GET /api/saved-suppliers`, בלי Cache). כך תמיד מוצג המצב העדכני מה-Database.
+- בכל כניסה למסך, וגם אחרי ריענון, הרשימה של המשתמש המחובר נטענת מהשרת (`GET /api/saved-suppliers`, בלי Cache). כך תמיד מוצג המצב העדכני מה-Database.
 - **סינון לפי עיר ותחום (PRD FR7.3):** הבחירה נשמרת בכתובת הדף (`/saved?country=…&city=…&service=…`), ולכן היא נשארת אחרי ריענון. הקישור בניווט נבנה מהבחירה בטופס החיפוש, או מהחיפוש האחרון. הערכים בכתובת נבדקים מול הקטלוג, והסינון נעשה בלקוח, על הרשימה שהתקבלה מהשרת (ADR-7). כל עוד לא נבחרו עיר ותחום, לא מוצגים ספקים.
 - **ייצוא ל-Excel (PRD FR7.10):** כפתור Экспорт в Excel מוצג כשמוצג לפחות ספק אחד. הלקוח שולח `GET /api/saved-suppliers/export` עם העיר, התחום ושפת הממשק, והקובץ נמסר כמו בייצוא תוצאות החיפוש (Web Share API בנייד, הורדה רגילה במחשב).
 - כל ספק מוצג בכרטיס עם הפרטים, תנאי הסף, המקורות, העיר ותחום השירות, תאריך השמירה, רשימה נפתחת לסטטוס, שדה הערה עם מונה תווים (עד 1,000), כפתור Сохранить заметку וכפתור Удалить.
@@ -189,13 +211,17 @@ Repository אחד ב-GitHub, עם פרויקט Next.js אחד:
 
 Route Handlers של Next.js בסביבת Node.js (`export const runtime = "nodejs"`). Vercel מריץ אותם כ-Vercel Functions באזור `fra1` (פרנקפורט), אותו אזור שבו נמצא ה-Database (סעיף 2.10). כל Handler דק: הוא בודק את הקלט עם Zod, קורא ללוגיקה שב-`/server` ומחזיר תשובה.
 
+**זיהוי המשתמש בכל Route Handler של `/api`:** ה-Handler יוצר Supabase Auth client מהעוגיות של הבקשה (`/server/auth`) וקורא ל-`auth.getUser()`, שמאמת את ה-Session מול Supabase. אם אין משתמש מחובר, מוחזר `401`. מזהה המשתמש (`user.id`) עובר ל-`/server/db`, וכל שאילתה על `saved_suppliers` מסוננת לפיו.
+
 **Search Route Handler – שלבי העיבוד:**
-1. **ולידציה:** בדיקה ש-`countryId`, `cityId` ו-`serviceId` קיימים בקטלוג ושהעיר שייכת למדינה. קלט לא תקין מחזיר `400`.
-2. **בניית הבקשה ל-OpenAI:** הוראות קבועות (`instructions`, ראו 2.6) והודעת משתמש שנבנית מהקטלוג.
-3. **קריאה אחת ל-OpenAI Responses API** (`responses.create`), שבמהלכה המודל מריץ את החיפושים ברשת ומחזיר תוצאה מובנית.
-4. **עיבוד התשובה וכללי עסק** (ראו 2.6).
-5. **סימון ספקים שמורים:** שאילתה אחת ל-Database לפי מפתחות הזיהוי של 5 הספקים (ראו 2.5), ומילוי `savedId`. אם ה-Database לא זמין, `savedId` הוא `null` לכל הספקים, והחיפוש לא נכשל.
-6. **החזרת JSON** לפי `SearchResponse`.
+1. **זיהוי המשתמש** (ראו למעלה).
+2. **ולידציה:** בדיקה ש-`countryId`, `cityId` ו-`serviceId` קיימים בקטלוג ושהעיר שייכת למדינה. קלט לא תקין מחזיר `400`.
+3. **תוצאה שמורה (ADR-11):** אם `refresh` אינו `true`, נקראת השורה של העיר והתחום מהטבלה `search_results`. אם היא קיימת ו-`searched_at` שלה בתוך 30 הימים האחרונים, התוצאה השמורה עוברת ישר לשלב 7. אם הקריאה מה-Database נכשלת, ממשיכים לחיפוש ברשת.
+4. **בניית הבקשה ל-OpenAI:** הוראות קבועות (`instructions`, ראו 2.6) והודעת משתמש שנבנית מהקטלוג.
+5. **קריאה אחת ל-OpenAI Responses API** (`responses.create`), שבמהלכה המודל מריץ את החיפושים ברשת ומחזיר תוצאה מובנית.
+6. **עיבוד התשובה וכללי עסק** (ראו 2.6), ושמירת התוצאה ב-`search_results` (`upsert` לפי העיר והתחום, בלי `savedId`). כישלון בשמירה נרשם בלוג ולא מכשיל את החיפוש.
+7. **סימון ספקים שמורים:** שאילתה אחת ל-Database לפי מפתחות הזיהוי של 5 הספקים (ראו 2.5), בספקים השמורים של המשתמש בלבד, ומילוי `savedId`. אם ה-Database לא זמין, `savedId` הוא `null` לכל הספקים, והחיפוש לא נכשל.
+8. **החזרת JSON** לפי `SearchResponse`. `searchedAt` הוא זמן החיפוש ברשת שממנו הגיעה התוצאה.
 
 **Export Route Handler:** מקבל את התוצאות, את פרמטרי החיפוש ואת שפת הממשק, ומחזיר קובץ xlsx.
 
@@ -218,6 +244,7 @@ Route Handlers של Next.js בסביבת Node.js (`export const runtime = "nodej
 | עמודה | סוג | הערות |
 |---|---|---|
 | `id` | `uuid` | Primary Key, `default gen_random_uuid()` |
+| `user_id` | `uuid` | `not null`, `references auth.users(id) on delete cascade`. המשתמש ששמר את הספק (ADR-12) |
 | `country_id` | `text` | `not null`, `check` לערכים `UA` / `MD` |
 | `city_id` | `text` | `not null` |
 | `service_id` | `text` | `not null` |
@@ -239,23 +266,36 @@ Route Handlers של Next.js בסביבת Node.js (`export const runtime = "nodej
 | `last_checked_at` | `timestamptz` | `null`. שמור לאוטומציה העתידית (סעיף 2.12) |
 
 **אינדקסים ואילוצים:**
-- `unique (city_id, service_id, name_key)`
-- `unique (city_id, service_id, website_domain) where website_domain is not null` (Partial Unique Index)
-- `index (saved_at desc)`, למיון הרשימה
+- `unique (user_id, city_id, service_id, name_key)`
+- `unique (user_id, city_id, service_id, website_domain) where website_domain is not null` (Partial Unique Index)
+- `index (user_id, saved_at desc)`, למיון הרשימה של כל משתמש
 
-שני האילוצים מיישמים את FR7.2 ברמת ה-Database. כך לא נוצרות כפילויות גם כששני משתמשים שומרים את אותו ספק בו-זמנית.
+שני האילוצים מיישמים את FR7.2 ברמת ה-Database, לכל משתמש בנפרד. כך לא נוצרות כפילויות גם כשאותו משתמש שומר את אותו ספק משני מכשירים בו-זמנית, ושני משתמשים יכולים לשמור את אותו ספק כל אחד לעצמו.
+
+#### Database – טבלה `search_results` (ADR-11)
+
+| עמודה | סוג | הערות |
+|---|---|---|
+| `city_id` | `text` | `not null` |
+| `service_id` | `text` | `not null` |
+| `response` | `jsonb` | `not null`. ה-`SearchResponse` אחרי כללי העסק, בלי `savedId` |
+| `searched_at` | `timestamptz` | `not null`. זמן החיפוש ברשת. ממנו נקבע התוקף של 30 ימים |
+
+- **Primary Key:** `(city_id, service_id)`. לכל צירוף נשמרת רק התוצאה האחרונה, וחיפוש חדש ברשת מחליף אותה.
+- **RLS מופעל בלי Policies**, כמו ב-`saved_suppliers`. רק השרת ניגש לטבלה.
+- התוקף נבדק בקריאה, ולכן אין צורך במחיקה תקופתית. בכל היותר 60 שורות (6 ערים × 10 תחומים).
 
 **מיפוי סטטוסים לממשק:** `new` = Новый / New / Новий, `contacted` = Связались / Contacted / Зв'язалися, `approved` = Одобрен / Approved / Схвалений, `not_suitable` = Не подходит / Not suitable / Не підходить.
 
 #### טיפוסי API (ב-`/shared/schemas`)
 
 ```
-SearchRequest   { countryId, cityId, serviceId }
+SearchRequest   { countryId, cityId, serviceId, refresh?: boolean }   // refresh: חיפוש ברשת גם כשיש תוצאה שמורה בתוקף
 
 SearchResponse  {
   suppliers: Supplier[]          // 0 עד 5
   fewerThanFive: boolean
-  searchedAt: ISO datetime
+  searchedAt: ISO datetime       // זמן החיפוש ברשת, גם כשהתוצאה הגיעה מ-search_results
 }
 
 Supplier {
@@ -277,7 +317,7 @@ Supplier {
 CriterionResult { status: "met" | "not_met" | "not_verified", sourceUrls: string[] }
 Source          { url: string, title: string | null }
 
-SavedSupplier   = Supplier (בלי savedId) + { id, countryId, cityId, serviceId,
+SavedSupplier   = Supplier (בלי savedId) + { id, countryId, cityId, serviceId,   // user_id לא נשלח ללקוח
                   status: "new" | "contacted" | "approved" | "not_suitable",
                   note: string, savedAt, updatedAt }
 
@@ -320,6 +360,7 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 3. **חישוב `meetsAllCriteria`:** הערך `true` רק אם שלושת התנאים בסטטוס `met`.
 4. **בחירה ומיון:** קודם כל הספקים ש-`meetsAllCriteria = true`, ואחריהם ספקים חלקיים. ספקים חלקיים ממוינים לפי מספר התנאים בסטטוס `met`, מהגבוה לנמוך. נבחרים עד 5 ספקים (PRD FR3.2–FR3.5).
 5. **`fewerThanFive`:** הערך `true` כשנבחרו פחות מ-5 ספקים.
+6. **שמירת התוצאה:** התוצאה אחרי כללים 1–5 נשמרת ב-`search_results` לעיר ולתחום, עם `searched_at`. רק חיפוש שהצליח נשמר. חיפוש שנכשל או בוטל לא מוחק תוצאה שמורה קיימת.
 
 הנרמול של `name_key` ו-`website_domain` מוגדר בפונקציה אחת ב-`/shared`. הוא משמש גם בהסרת הכפילויות, גם בסימון `savedId` וגם בשמירה ל-Database, כך שההשוואה עקבית.
 
@@ -331,13 +372,18 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 |---|---|---|---|---|
 | `/api/search` | POST | `SearchRequest` | `SearchResponse` | `400`, `429`, `502` כשל בשירות ה-AI, `504` חריגת זמן |
 | `/api/export` | POST | `ExportRequest` | קובץ xlsx עם `Content-Disposition: attachment` | `400` קלט לא תקין או רשימת ספקים ריקה |
-| `/api/saved-suppliers` | GET | – | `{ items: SavedSupplier[], total }`, ממוין לפי `saved_at desc` | `500` |
+| `/api/saved-suppliers` | GET | – | `{ items: SavedSupplier[], total }` של המשתמש המחובר, ממוין לפי `saved_at desc` | `500` |
 | `/api/saved-suppliers` | POST | `{ search: SearchRequest, supplier: Supplier }` | `201` עם `SavedSupplier` שנוצר | `400`. `409` אם הספק כבר שמור, עם ה-`SavedSupplier` הקיים בגוף התשובה |
 | `/api/saved-suppliers/[id]` | PATCH | `{ status? , note? }` (לפחות שדה אחד) | `200` עם `SavedSupplier` מעודכן | `400` ערך לא תקין, `404` הספק לא קיים |
 | `/api/saved-suppliers/[id]` | DELETE | – | `204` | `404` הספק כבר לא קיים |
 | `/api/saved-suppliers/export` | GET | `?city=&service=&lang=` | קובץ xlsx עם `Content-Disposition: attachment` | `400` קלט לא תקין או אין ספקים שמורים לעיר ולתחום, `500` |
+| `/auth/login` | GET | `?next=` | הפניה (302) לדף ההתחברות של Google, דרך Supabase Auth | – |
+| `/auth/callback` | GET | `?code=&next=` (מ-Google) | יצירת ה-Session בעוגיות והפניה ל-`next` | הפניה ל-`/login?error=1` |
+| `/auth/logout` | POST | – | מחיקת ה-Session והפניה ל-`/login` | – |
 
-- **POST:** השרת מחשב את `name_key` ואת `website_domain` ומכניס את השורה. אם אחד מאילוצי הייחודיות נכשל (`23505`), מוחזר `409` עם השורה הקיימת, והלקוח מציג את הכרטיס כ"נשמר" (PRD, מקרי קצה).
+- **התחברות:** כל ה-Endpoints של `/api` מחזירים `401` כשאין משתמש מחובר. כל הפעולות על ספקים שמורים חלות רק על הספקים של המשתמש המחובר. ספק של משתמש אחר מטופל כאילו אינו קיים (`404`).
+
+- **POST:** השרת מחשב את `name_key` ואת `website_domain` ומכניס את השורה, עם `user_id` של המשתמש המחובר. אם אחד מאילוצי הייחודיות נכשל (`23505`), מוחזר `409` עם השורה הקיימת, והלקוח מציג את הכרטיס כ"נשמר" (PRD, מקרי קצה).
 - **PATCH:** השרת מעדכן רק את `status` ו-`note`. כל שדה אחר בגוף הבקשה נדחה בולידציה. השינוי האחרון שנשמר הוא זה שנשאר.
 - **DELETE עם `404`:** הלקוח מסיר את הכרטיס מהרשימה, כי הספק כבר נמחק.
 - **PATCH עם `404`:** הלקוח מציג את הודעת השגיאה של שמירה שנכשלה וטוען מחדש את הרשימה.
@@ -352,13 +398,20 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 
 ### 2.8 Data Flow
 
+**Flow 0: התחברות**
+1. משתמש לא מחובר פותח דף. `proxy.ts` מפנה אותו ל-`/login?next=<הדף>`.
+2. המשתמש לוחץ על Войти через Google. הדפדפן עובר ל-`/auth/login`, ומשם, דרך Supabase Auth, לדף ההתחברות של Google.
+3. אחרי האישור, Google מחזיר ל-Supabase Auth, ומשם ל-`/auth/callback`. השרת יוצר את ה-Session בעוגיות ומפנה לדף שב-`next`.
+4. בהתחברות הראשונה, Supabase Auth יוצר את המשתמש אוטומטית.
+
 **Flow 1: חיפוש**
-1. המשתמש בוחר מדינה, עיר ותחום ולוחץ על Найти.
+1. המשתמש בוחר מדינה, עיר ותחום ולוחץ על Найти (או על Искать заново, שמוסיף `refresh: true`).
 2. הלקוח שולח `POST /api/search` ומציג Идёт поиск….
 3. Vercel WAF בודק את מגבלת הבקשות ל-IP.
-4. ה-Route Handler בודק את הקלט וקורא ל-OpenAI Responses API. המודל מריץ חיפושים ברשת ומחזיר תוצאה מובנית לפי הסכמה.
-5. השרת מריץ את כללי העסק, בודק ב-Database אילו ספקים כבר שמורים, ומחזיר `SearchResponse`.
-6. הלקוח מציג את הכרטיסים:
+4. ה-Route Handler מזהה את המשתמש ובודק את הקלט. אם יש ב-`search_results` תוצאה בתוקף לעיר ולתחום, והבקשה אינה `refresh`, הוא משתמש בה ומדלג לשלב 6.
+5. אחרת הוא קורא ל-OpenAI Responses API. המודל מריץ חיפושים ברשת ומחזיר תוצאה מובנית לפי הסכמה. השרת מריץ את כללי העסק ושומר את התוצאה ב-`search_results`.
+6. השרת בודק ב-Database אילו ספקים כבר שמורים אצל המשתמש, ומחזיר `SearchResponse`.
+7. הלקוח מציג את תאריך התוצאות, את כפתור Искать заново ואת הכרטיסים:
    - ליד כל ספק חלקי מוצגת התווית Соответствует не всем условиям.
    - לכל ספק מוצג Сохранить, או Сохранено אם הוא כבר שמור.
    - אם נמצאו פחות מ-5 ספקים, או אם לא נמצא אף ספק, מוצגות ההודעות שהוגדרו ב-PRD.
@@ -373,13 +426,13 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 **Flow 4: שמירת ספק**
 1. המשתמש לוחץ על Сохранить בכרטיס.
 2. הלקוח שולח `POST /api/saved-suppliers` עם הספק ופרמטרי החיפוש.
-3. השרת כותב שורה ל-`saved_suppliers` עם `status = 'new'`.
+3. השרת כותב שורה ל-`saved_suppliers` עם `status = 'new'` ועם `user_id` של המשתמש המחובר.
 4. השרת מחזיר `201`, או `409` אם הספק כבר שמור.
 5. בשני המקרים הכפתור מתחלף ל-Сохранено. אם השמירה נכשלה, מוצגת הודעת שגיאה והכפתור חוזר למצבו.
 
 **Flow 5: ניהול ספקים שמורים**
 1. המשתמש עובר ל-Сохранённые поставщики, עם העיר והתחום שנבחרו בחיפוש, והלקוח שולח `GET /api/saved-suppliers`.
-2. השרת קורא מה-Database ומחזיר את הרשימה. הלקוח מציג רק את הספקים של העיר והתחום שנבחרו, ואפשר להחליף אותם במסך.
+2. השרת קורא מה-Database את הספקים של המשתמש המחובר ומחזיר את הרשימה. הלקוח מציג רק את הספקים של העיר והתחום שנבחרו, ואפשר להחליף אותם במסך.
 3. **שינוי סטטוס:** `PATCH` עם `status`, והשרת מעדכן את השורה ואת `updated_at`.
 4. **שמירת הערה:** `PATCH` עם `note`.
 5. **מחיקה:** חלון אישור, ואחריו `DELETE`. השרת מוחק את השורה.
@@ -388,12 +441,13 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 
 ### 2.9 Authentication, Authorization, אבטחה ופרטיות
 
-- **Authentication / Authorization:** אין. הגישה, כולל עריכה ומחיקה של ספקים שמורים, פתוחה לכל מי שיש לו את הלינק (PRD FR6.1–FR6.2).
+- **Authentication:** התחברות עם Google דרך Supabase Auth (PRD FR6.1–FR6.2, ADR-12). ה-Session נשמר בעוגיות HttpOnly ש-`@supabase/ssr` מנהל, ו-`proxy.ts` מחדש אותו. ההתחברות לא דורשת סיסמה, ואין באפליקציה טופס הרשמה.
+- **Authorization:** כל Route Handler של `/api` מאמת את המשתמש עם `auth.getUser()` ומחזיר `401` בלי משתמש. כל שאילתה על `saved_suppliers` כוללת תנאי `user_id = <המשתמש המחובר>`, כולל עדכון, מחיקה וייצוא (PRD FR6.3). `search_results` משותפת לכל המשתמשים המחוברים.
 - **גישה ל-Database:**
-  - רק השרת ניגש ל-Supabase, עם **Secret Key** (`sb_secret_…`) שנמצא במשתני הסביבה של Vercel בלבד.
-  - **RLS מופעל** על `saved_suppliers` בלי אף Policy. כך Publishable Key או גישה אנונימית דרך ה-Data API לא יכולים לקרוא או לכתוב. ה-Secret Key עוקף את RLS ולכן עובד מהשרת.
-  - הפעלת ה-RLS היא חלק מה-Migration הראשון, ולכן היא זהה בשתי הסביבות.
-  - האפליקציה לא משתמשת ב-Publishable Key בכלל.
+  - רק השרת ניגש לטבלאות, עם **Secret Key** (`sb_secret_…`) שנמצא במשתני הסביבה של Vercel בלבד.
+  - **RLS מופעל** על `saved_suppliers` ועל `search_results` בלי אף Policy. כך Publishable Key או גישה אנונימית דרך ה-Data API לא יכולים לקרוא או לכתוב. ה-Secret Key עוקף את RLS ולכן עובד מהשרת. ההפרדה בין המשתמשים נאכפת בשרת (ADR-12).
+  - הפעלת ה-RLS היא חלק מה-Migrations, ולכן היא זהה בשתי הסביבות.
+  - ה-**Publishable Key** משמש רק את Supabase Auth client בשרת (`/server/auth`). הוא לא נשלח לדפדפן.
 - **סודות:**
   - כל הסודות נמצאים רק במשתני הסביבה של Vercel: מפתח OpenAI, Secret Key של Supabase ומחרוזת החיבור ל-Database.
   - רק משתנים עם הקידומת `NEXT_PUBLIC_` נכנסים ל-Bundle של הלקוח, ושום סוד לא מקבל את הקידומת הזו.
@@ -410,7 +464,7 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
   - `max_tool_calls` מגביל את מספר החיפושים לכל בקשה.
 - **תוכן מהרשת ומהמשתמשים:** טקסטים שהגיעו מהרשת והערות שמשתמשים כתבו מוצגים כטקסט רגיל, בלי HTML. קישורים מוצגים רק אם הם מתחילים ב-`http://` או ב-`https://`.
 - **Security Headers** ב-`next.config`: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
-- **פרטיות:** המערכת לא אוספת נתונים אישיים על המשתמשים, ואין עוגיות או Analytics. ב-Database נשמרים רק פרטי ספקים (עסקים) ממקורות פתוחים, וההערות של הצוות.
+- **פרטיות:** על המשתמשים נשמר רק מה ש-Supabase Auth צריך להתחברות: מזהה, כתובת מייל ושם מחשבון Google. העוגיות היחידות הן עוגיות ה-Session, ואין Analytics. ב-Database נשמרים פרטי ספקים (עסקים) ממקורות פתוחים, וההערות של כל משתמש, שנגישות רק לו.
 - **גיבויים:** אין גיבויים יומיים, כי פרויקט ה-Production בתוכנית Free של Supabase (ADR-8). חלון האישור לפני מחיקה הוא ההגנה מפני מחיקה בטעות.
 
 ### 2.10 תשתיות, Hosting, פריסה ותצורה
@@ -425,7 +479,7 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 - **Build Command:** `node scripts/migrate.mjs && next build`. הסקריפט מריץ קודם את ה-Migrations על ה-Database של אותה סביבה (ראו בהמשך), ורק אם הן הצליחו מתבצע ה-Build.
 - **אזור Functions:** `fra1` (פרנקפורט), קרוב ל-Database ולמשתמשים.
 - **Functions:** `export const maxDuration = 180` ב-`/api/search`. התוכנית Pro מאפשרת עד 800 שניות.
-- **Deployment Protection:** ה-Production פתוח לכל מי שיש לו את הלינק. Preview Deployments לא משמשים בתהליך העבודה.
+- **Deployment Protection:** לא בשימוש. הכתובת נגישה לכולם, והגישה לאפליקציה נשלטת בהתחברות עם Google (ADR-12). Preview Deployments לא משמשים בתהליך העבודה.
 
 #### Supabase – שני פרויקטים נפרדים
 
@@ -449,6 +503,7 @@ ExportRequest   { search: SearchRequest, response: SearchResponse, uiLanguage: "
 |---|---|---|---|
 | `SUPABASE_URL` | הגדרה, צד שרת | ה-URL של פרויקט ה-Development | ה-URL של פרויקט ה-Production |
 | `SUPABASE_SECRET_KEY` | סוד, צד שרת | Secret Key של פרויקט ה-Development | Secret Key של פרויקט ה-Production |
+| `SUPABASE_PUBLISHABLE_KEY` | הגדרה, צד שרת (לא סוד, אבל לא נשלח לדפדפן) | Publishable Key של פרויקט ה-Development | Publishable Key של פרויקט ה-Production |
 | `SUPABASE_DB_URL` | סוד, Build בלבד | מחרוזת החיבור (Session Pooler) של ה-Development | מחרוזת החיבור (Session Pooler) של ה-Production |
 | `OPENAI_API_KEY` | סוד, צד שרת | מפתח של Project בשם `dev` ב-OpenAI | מפתח של Project בשם `prod` ב-OpenAI |
 | `OPENAI_MODEL` | הגדרה | `gpt-5.5` | `gpt-5.5` |
@@ -487,6 +542,7 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 **כללים:**
 - **Migrations תואמות לאחור:** מוסיפים טבלאות, עמודות או אינדקסים. מחיקה או שינוי שם של עמודה נעשים בשני שלבים, בשתי פריסות נפרדות. הסיבה היא שבזמן ה-Build הגרסה הקודמת עדיין פעילה מול ה-Database המעודכן.
 - **הפעלה ראשונה:** ה-Migration הראשונה יוצרת את הטבלה `saved_suppliers`, את האילוצים, את האינדקסים ואת ה-Trigger של `updated_at`, ומפעילה RLS.
+- **חריג – שיוך הספקים השמורים למשתמשים (ADR-12):** ה-Migration שמוסיפה את `user_id` מוחקת את כל הספקים השמורים הקיימים, לפי החלטת המשתמשת, ומחליפה את אילוצי הייחודיות. היא לא תואמת לאחור: בזמן ה-Build, שמירה מהגרסה הקודמת תיכשל. זה מקובל כי מדובר בכדקה. המחיקה בלתי הפיכה, ולכן לפני הדחיפה ה-AI מציין במפורש שהיא תמחק את כל הספקים השמורים ב-Production.
 
 #### הגדרות שלא עוברות ב-Migrations
 
@@ -496,7 +552,8 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 |---|---|
 | **API Keys** | יוצרים Secret Key ייעודי לאפליקציה, ומעתיקים אותו ל-`SUPABASE_SECRET_KEY` ב-Vercel, בהיקף המתאים |
 | **סיסמת ה-Database ומחרוזת החיבור** | מעתיקים את מחרוזת ה-Session Pooler ל-`SUPABASE_DB_URL` ב-Vercel |
-| **Authentication** | לא בשימוש. מכבים "Allow new users to sign up", כדי שאי אפשר יהיה ליצור משתמשים בפרויקט |
+| **Authentication** | מפעילים את הספק **Google** עם ה-Client ID וה-Client Secret מ-Google Cloud. משאירים את "Allow new users to sign up" פעיל (משתמש נוצר בהתחברות הראשונה), ומכבים את הספק Email. ב-URL Configuration מגדירים את ה-Site URL ואת ה-Redirect URLs: ב-Development `http://localhost:3000/auth/callback`, וב-Production `https://suppliers-umber-phi.vercel.app/auth/callback` |
+| **Google Cloud** (פעם אחת, לשני הפרויקטים) | פרויקט ב-Google Cloud עם OAuth consent screen מסוג External, עם ההרשאות הבסיסיות בלבד (`openid`, `email`, `profile`), ובמצב Published. OAuth Client מסוג Web application, שב-Authorized redirect URIs שלו כתובות ה-Callback של Supabase Auth בשני הפרויקטים (`https://<project-ref>.supabase.co/auth/v1/callback`) |
 | **Storage** | לא בשימוש. לא יוצרים Buckets |
 | **Data API** | משאירים את הסכמה `public` חשופה (supabase-js משתמש בה). ה-RLS בטבלה חוסם גישה בלי Secret Key |
 | **אזור ותוכנית** | האזור נבחר ביצירת הפרויקט. התוכנית (Free) נקבעת ברמת ה-Organization המשותף |
@@ -505,7 +562,8 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 - Vercel Runtime Logs: שגיאות וזמני תגובה.
 - Supabase Dashboard: נתוני הטבלה, שימוש ב-Database ולוגים.
 - OpenAI Platform (Usage): עלויות ושימוש לפי Project.
-- בכל חיפוש נרשמים בלוג `usage.input_tokens`, `usage.output_tokens`, `usage.output_tokens_details.reasoning_tokens` ומספר פריטי `web_search_call` בתשובה (מספר החיפושים).
+- בכל חיפוש ברשת נרשמים בלוג `usage.input_tokens`, `usage.output_tokens`, `usage.output_tokens_details.reasoning_tokens` ומספר פריטי `web_search_call` בתשובה (מספר החיפושים). חיפוש שנענה מ-`search_results` נרשם כ-`search_cached`.
+- Supabase Dashboard → Authentication: רשימת המשתמשים שהתחברו.
 
 #### עלויות קבועות
 - Vercel Pro: 20$ לחודש לכל משתמש מפתח.
@@ -516,7 +574,7 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 
 - **נגישות:** HTML סמנטי עם `<label>` לכל שדה. סטטוסים מוצגים בצבע וגם בטקסט. חלון האישור הוא `<dialog>` נגיש, עם פוקוס על כפתור הביטול. ניתן לנווט ולהפעיל את כל הפעולות במקלדת.
 - **Timeout בלקוח:** 190 שניות לחיפוש, כלומר יותר מה-`maxDuration` של השרת. 15 שניות לפעולות על ספקים שמורים.
-- **ללא מטמון (Cache) בשרת:** לא לתוצאות החיפוש ולא לרשימת הספקים השמורים, כדי שרשימת הספקים השמורים תציג אחרי כל ריענון את המצב שב-Database. החיפוש האחרון נזכר רק בלשונית של המשתמש (ADR-10).
+- **מטמון (Cache):** תוצאות החיפוש נשמרות ב-`search_results` ל-30 ימים (ADR-11). לרשימת הספקים השמורים אין מטמון, כדי שאחרי כל ריענון יוצג המצב שב-Database. תשובות ה-API עצמן נשלחות עם `Cache-Control: no-store`.
 - **גרסאות:** תלויות מוגדרות בגרסאות מדויקות ב-`package.json`, עם `package-lock.json` ב-Repository.
 
 ### 2.12 הכנה לאוטומציה העתידית (לא ממומשת בגרסה זו)
@@ -596,3 +654,17 @@ scripts/migrate.mjs  →  npx supabase db push --db-url "$SUPABASE_DB_URL"
 **הקשר:** בפידבק של מנחה הקורס עלה שרענון מחזיר את מסך החיפוש למצבו הריק ומאפס את השפה לרוסית. שני אלה נשמרו רק בזיכרון של הדף, והתכנון המקורי קבע שהשפה לא נשמרת בין כניסות. הרצת החיפוש מחדש בכל רענון הייתה עולה כסף ולוקחת כדקה.
 **החלטה:** השפה נשמרת ב-`localStorage`. הבחירות בטופס והחיפוש האחרון שהסתיים נשמרים ב-`sessionStorage`, אחרי בדיקה מול סכמות Zod בקריאה חזרה. הזיכרון מוחל אחרי טעינת הדף, ו-i18next מתעדכן רק אחרי ש-React החיל את השפה החדשה, כדי למנוע אי-התאמה מול ה-HTML שהגיע מהשרת. לא נוספו עוגיות, ואין שינוי ב-Database או ב-API.
 **השלכות:** ריענון שומר על השפה, על הבחירות ועל התוצאות, בלי חיפוש נוסף ובלי עלות. בכניסה בשפה שאינה רוסית ייתכן הבהוב קצר של רוסית בזמן הטעינה. חיפוש שרץ בזמן הריענון נעצר, והזיכרון של החיפוש נמחק כשסוגרים את הלשונית. אם הדפדפן חוסם אחסון, האפליקציה ממשיכה לעבוד בלי הזיכרון.
+
+### ADR-11: שמירת תוצאות החיפוש במסד הנתונים ל-30 ימים
+**הקשר:** מנחה הקורס העיר שהחיפוש לוקח יותר מדי זמן (35–52 שניות), וביקש לשמור את התוצאות במסד ולטעון אותן בחיפוש חוזר במקום לחפש שוב. יש רק 60 צירופים אפשריים של עיר ותחום. המשתמשת בחרה תוקף של 30 ימים וכפתור לחיפוש מחדש.
+**החלטה:** טבלה `search_results` עם שורה אחת לכל עיר ותחום, שמכילה את ה-`SearchResponse` אחרי כללי העסק ואת זמן החיפוש ברשת. `/api/search` מחזיר שורה בתוקף (עד 30 ימים) בלי לפנות ל-OpenAI, אלא אם הבקשה כוללת `refresh: true`. כל חיפוש מוצלח ברשת מחליף את השורה. התוצאות השמורות משותפות לכל המשתמשים, והסימון `savedId` מחושב בכל בקשה לפי הספקים השמורים של המשתמש המחובר.
+**השלכות:** חיפוש חוזר נענה תוך שנייה ובלי עלות, וחיפושים בתשלום נעשים רק פעם בחודש לכל צירוף, או לפי בקשה. המידע עשוי להיות בן עד 30 ימים, ולכן התאריך מוצג ליד התוצאות. כפתור «Искать заново» של משתמש אחד מעדכן את התוצאה לכולם. Migration חדשה, בלי שינוי בטבלאות קיימות.
+
+### ADR-12: התחברות עם Google דרך Supabase Auth, ורשימה שמורה אישית
+**הקשר:** מנחה הקורס ביקש שכל משתמש יתחבר עם Google ויראה רק את הספקים השמורים וההערות שלו. התכנון המקורי היה בלי התחברות, עם רשימה משותפת. המשתמשת החליטה שההתחברות נדרשת גם לחיפוש, שכל חשבון Google יכול להתחבר, ושהספקים השמורים הקיימים יימחקו.
+**החלטה:**
+- **ספק ההתחברות:** Supabase Auth עם הספק Google. נבחר על פני ספרייה נפרדת (Auth.js) כי Supabase כבר משמש את הפרויקט, ההתחברות כלולה בתוכנית החינמית, ורשימת המשתמשים מוצגת ב-Dashboard.
+- **בצד השרת בלבד:** ההתחברות מתחילה ב-Route Handler (`/auth/login`), וה-Session נשמר בעוגיות HttpOnly באמצעות `@supabase/ssr`. `proxy.ts` מחדש את ה-Session ומפנה ל-`/login`. אין מפתח Supabase בקוד הלקוח.
+- **הפרדה בין המשתמשים:** עמודת `user_id` ב-`saved_suppliers`, ואילוצי הייחודיות כוללים אותה. ה-RLS נשאר בלי Policies, וההפרדה נאכפת בשרת: כל שאילתה מסוננת לפי המשתמש שאומת עם `auth.getUser()`. כך נשמר העיקרון שכל כללי העסק נאכפים במקום אחד.
+- **נתונים קיימים:** ה-Migration מוחקת את הספקים השמורים הקיימים, כי אין להם בעלים.
+**השלכות:** כל המשתמשים צריכים חשבון Google. המשתמשת מגדירה בעצמה, בהדרכה, את Google Cloud ואת Supabase Auth בשני הפרויקטים. נוסף המשתנה `SUPABASE_PUBLISHABLE_KEY`. נתוני ההדגמה ב-Production יימחקו וצריך ליצור אותם מחדש. כל דפי האפליקציה דינמיים, כי הם תלויים בעוגיית ה-Session. בעתיד אפשר להוסיף Policies של RLS לפי `auth.uid()` כשכבת הגנה נוספת, בלי לשנות את הממשק.

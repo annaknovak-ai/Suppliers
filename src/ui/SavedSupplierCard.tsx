@@ -12,17 +12,12 @@ import { Button } from "./Button";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { TrashIcon } from "./icons";
 import { Select } from "./Select";
+import { formatDate } from "./formatDate";
 import { StatusChip } from "./StatusChip";
 import { SupplierDetails } from "./SupplierDetails";
 import cardStyles from "./SupplierCard.module.css";
 import styles from "./SavedSupplierCard.module.css";
 
-// DD.MM.YYYY in every interface language (DESIGN 2.2).
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
-}
 
 type SavedSupplierCardProps = {
   item: SavedSupplier;

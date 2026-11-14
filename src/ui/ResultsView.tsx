@@ -12,7 +12,8 @@ import { useAppState } from "@/src/state/AppStateProvider";
 import { Banner } from "./Banner";
 import { Button } from "./Button";
 import { EmptyState } from "./EmptyState";
-import { DownloadIcon } from "./icons";
+import { formatDate } from "./formatDate";
+import { DownloadIcon, SearchIcon } from "./icons";
 import { ProgressBar } from "./ProgressBar";
 import { SupplierCard } from "./SupplierCard";
 import styles from "./ResultsView.module.css";
@@ -20,11 +21,16 @@ import styles from "./ResultsView.module.css";
 export function ResultsView() {
   const { t } = useTranslation();
   const { search, retrySearch } = useAppState();
-  const { status, request, response } = search;
+  const { status, request, response, refresh } = search;
 
   return (
     <section className={styles.results} aria-live="polite" aria-busy={status === "loading"}>
-      {status === "loading" && <SearchProgress key={`${request?.cityId}-${request?.serviceId}`} />}
+      {status === "loading" && (
+        <SearchProgress
+          key={`${request?.cityId}-${request?.serviceId}-${refresh}`}
+          delayMs={refresh ? 0 : LOADING_DELAY_MS}
+        />
+      )}
 
       {status === "error" && (
         <Banner
@@ -48,14 +54,24 @@ const STAGE_KEYS = ["search.stages.sources", "search.stages.criteria", "search.s
 // so these follow its typical course (35-52 seconds measured), not live events.
 const STAGE_STARTS_MS = [15_000, 35_000];
 
-function SearchProgress() {
+// A saved result usually arrives well within this time and is shown without the loading state (DESIGN 1.2);
+// "Search again" always searches the web, so it shows the loading state at once.
+const LOADING_DELAY_MS = 800;
+
+function SearchProgress({ delayMs }: { delayMs: number }) {
   const { t } = useTranslation();
   const [stage, setStage] = useState(0);
+  const [visible, setVisible] = useState(delayMs === 0);
 
   useEffect(() => {
-    const timers = STAGE_STARTS_MS.map((ms, i) => setTimeout(() => setStage(i + 1), ms));
+    const timers = [
+      setTimeout(() => setVisible(true), delayMs),
+      ...STAGE_STARTS_MS.map((ms, i) => setTimeout(() => setStage(i + 1), ms)),
+    ];
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [delayMs]);
+
+  if (!visible) return null;
 
   return (
     <div className={styles.loading}>
@@ -72,7 +88,7 @@ function SearchProgress() {
 // Mounted only while results are shown, so the export state resets with every new search.
 function Results({ request, response }: { request: SearchRequest; response: SearchResponse }) {
   const { t } = useTranslation();
-  const { lang, saveResultSupplier } = useAppState();
+  const { lang, saveResultSupplier, refreshSearch } = useAppState();
   const [exportState, setExportState] = useState<"idle" | "exporting" | "error">("idle");
 
   async function handleExport() {
@@ -112,6 +128,13 @@ function Results({ request, response }: { request: SearchRequest; response: Sear
             {t("search.export")}
           </Button>
         )}
+      </div>
+
+      <div className={styles.searchedAt}>
+        <span className={styles.date}>{t("results.searchedAt", { date: formatDate(response.searchedAt) })}</span>
+        <Button variant="ghost" compact icon={<SearchIcon size={16} />} onClick={refreshSearch}>
+          {t("results.searchAgain")}
+        </Button>
       </div>
 
       {exportState === "error" && <Banner variant="error" message={t("search.exportError")} />}
