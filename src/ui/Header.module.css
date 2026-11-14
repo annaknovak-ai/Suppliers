@@ -77,18 +77,50 @@
       "brand lang"
       "nav nav";
     height: auto;
+    column-gap: var(--space-3);
     row-gap: var(--space-1);
     padding-top: var(--space-2);
+  }
+
+  .wordmark {
+    min-width: 0;
   }
 
   .wordmarkText {
     font-size: 22px;
     line-height: 28px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .nav {
     height: 44px;
     gap: var(--space-4);
     overflow-x: auto;
+  }
+}
+
+/* Very narrow phones (e.g. folded screens): smaller brand and tighter navigation so nothing overflows. */
+@media (max-width: 359px) {
+  .inner {
+    column-gap: var(--space-2);
+  }
+
+  .wordmark {
+    gap: var(--space-1);
+  }
+
+  .wordmark svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .wordmarkText {
+    font-size: 17px;
+    line-height: 24px;
+  }
+
+  .nav {
+    gap: var(--space-3);
   }
 }

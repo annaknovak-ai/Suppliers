@@ -43,3 +43,10 @@
     min-width: 44px;
   }
 }
+
+@media (max-width: 359px) {
+  .option {
+    min-width: 36px;
+    padding: 0 var(--space-1);
+  }
+}
